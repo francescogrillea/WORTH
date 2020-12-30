@@ -1,30 +1,42 @@
 package server;
 
 import java.io.*;
+import java.rmi.RemoteException;
+
 import common.*;
 
 public class ServerMainClass {
 
     private final static String RECOVERY_FILE_PATH = "./recovery/"; // dove sono contenuti i file persistenti
-    private final static String FILENAME_utentiRegistrati = "utentiRegistrati.json";  //nome del file che contiene l'elenco degli utenti registrati
+    private final static String FILENAME_utentiRegistrati = "utentiRegistrati.json"; // nome del file che contiene
+                                                                                     // l'elenco degli utenti registrati
 
-    //data structures
+    // data structures
     public static UsersDB users;
-    //private static LinkedList<Project> projects;
+    // private static LinkedList<Project> projects;
 
-    public static void main(String[] args){
-        
+    public static void main(String[] args) {
+
         users = new UsersDB();
-        //prova
+        // prova
         restoreBackup();
 
         System.out.println("Ripristino lo stato iniziale: lista utenti");
         for (User u : users.listUser())
-            System.out.println(u.getUsername() + " - "+ u.getStatus());
+            System.out.println(u.getUsername() + " - " + u.getStatus());
 
-        //RMI class to implement Register function
-        new RegistrationClass(users, RECOVERY_FILE_PATH).start();
-        new NotificationClass(users).start();
+        // RMI class to implement Register function
+        CallbackServiceServer notificationService = new NotificationClass().start();
+
+        new RegistrationClass(users, RECOVERY_FILE_PATH, notificationService).start();
+        
+        try {//chiamata fittizia
+            Thread.sleep(10000);
+            notificationService.update(users);  //da fare nella funzione login all'interno della connessione TCP
+        } catch (RemoteException | InterruptedException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
 
     }
 

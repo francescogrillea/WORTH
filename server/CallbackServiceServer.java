@@ -39,9 +39,7 @@ public class CallbackServiceServer extends RemoteServer implements NotificationS
             System.out.println("errore occurred");
     }
 
-    public void update(UsersDB newDB)throws RemoteException, InterruptedException {
-        Thread.sleep(10000);
-
+    public void update(UsersDB newDB)throws RemoteException {
         System.out.println("Update");
         doCallbacks(newDB);
     }
@@ -55,6 +53,5 @@ public class CallbackServiceServer extends RemoteServer implements NotificationS
         }
         System.out.println("Callbacks completed");
     }
-
     
 }

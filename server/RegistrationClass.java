@@ -16,13 +16,15 @@ public class RegistrationClass extends RemoteServer implements RegistrationInter
 
     private UsersDB users;
     //private String PATH;
+    private CallbackServiceServer notificationService;
 
-    public RegistrationClass(UsersDB u, String p) {
+    public RegistrationClass(UsersDB u, String fp, CallbackServiceServer ns) {
         users = u;
-        //PATH = p;
-    }
+        notificationService = ns;
+        //PATH = p
+	}
 
-    //publish remote method
+	//publish remote method
     public void start(){
         int RMI_Port = 4567;
         try {
@@ -48,6 +50,7 @@ public class RegistrationClass extends RemoteServer implements RegistrationInter
                 return "Utente "+nickname+" gia' registrato.";
         }
         users.addUser(new User(nickname, password));
+        notificationService.update(users);
 
         //scrivi nel file json l'aggiornamento
         /*
