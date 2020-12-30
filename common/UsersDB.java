@@ -24,6 +24,10 @@ public class UsersDB implements Serializable{
     public LinkedList<User> listOnlineUser(){
         return null;
     }
+
+    public void copy(UsersDB newDB){
+        this.users = newDB.listUser();
+    }
     
 
 }

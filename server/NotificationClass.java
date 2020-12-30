@@ -8,14 +8,16 @@ import common.*;
 
 public class NotificationClass {
 
-    private UsersDB users;
     private final int RMI_CALLBACK_PORT = 4568;
+    /*
+    private UsersDB users;
 
     public NotificationClass(UsersDB u) {
         users = u;
     }
+    */
 
-    public void start() {
+    public CallbackServiceServer start() {
         try {
             CallbackServiceServer server = new CallbackServiceServer();
             NotificationSystemServerInterface stub = (NotificationSystemServerInterface) UnicastRemoteObject.exportObject(server, 39000);
@@ -25,11 +27,13 @@ public class NotificationClass {
             r.bind("NotificationService", stub);
 
             //invio i valori aggiornati
-            server.update(users);
+            //server.update(users);
+            return server;
 
         } catch (Exception e) {
             e.printStackTrace();
         }
+        return null;
     }
 
 }
