@@ -1,32 +1,48 @@
 package common;
 
 import java.io.Serializable;
-import java.util.LinkedList;
+import java.util.*;
+
 
 public class UsersDB implements Serializable{
+
     private static final long serialVersionUID = 1L;    //TODO- che significa?
-    private LinkedList<User> users;// TODO- LinkedList or ArrayList?
+    private HashMap<String, User> users;
 
     public UsersDB(){
-        users = new LinkedList<User>();
+        users = new HashMap<String, User>();
     }
 
-    public void addUser(User u){
-        users.add(u);
-    }
-
-    public LinkedList<User> listUser(){
+    //get HashMap
+    public HashMap<String, User> getStructure(){
         return users;
     }
 
-    //TODO- implement this  
-    //e' una classe da RMI / callback ? penso di si
-    public LinkedList<User> listOnlineUser(){
-        return null;
+    //new user
+    public void addUser(User u){
+        users.put(u.getUsername(), u);
     }
 
+    //return a specific user or null
+    public User getUser(String name){
+        return users.get(name);
+    }
+
+    //list all user
+    public Collection<User> listUser(){
+        return users.values();
+    }
+
+    //set users status offline
+    public void setAllOffline(){
+
+        for (User u : users.values()) 
+            u.setOffline();
+    }
+
+    //copy newDBs structure in the current data structure
     public void copy(UsersDB newDB){
-        this.users = newDB.listUser();
+        this.users = newDB.getStructure();
     }
     
 

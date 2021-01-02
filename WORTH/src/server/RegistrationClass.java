@@ -41,17 +41,15 @@ public class RegistrationClass extends RemoteServer implements RegistrationInter
 
 
     @Override
-    public synchronized String register(String nickname, String password) throws RemoteException {
+    public String register(String nickname, String password) throws RemoteException {
 
         if(nickname.equals(null) || password.equals(null))
             return "Inserire username e password validi";
-
-        try{
-            users.getUser(nickname);
-        }catch(NullPointerException e){
-            return "Utente "+nickname+" gia' registrato.";
+        
+        for (User u : users.listUser()) {
+            if(u.getUsername().equals(nickname))
+                return "Utente "+nickname+" gia' registrato.";
         }
-
         users.addUser(new User(nickname, password));
         notificationService.update(users);
 

@@ -11,20 +11,22 @@ public class ServerMainClass {
 
     // data structures
     public static UsersDB users;
+    // private static LinkedList<Project> projects;
 
     public static void main(String[] args) {
 
         users = new UsersDB();
         restoreBackup();
 
-        //Il server stampa la lista iniziale degli utenti registrati. Per semplicita' ogni utente ha la stessa password 'myPass'
         System.out.println("Ripristino lo stato iniziale: lista utenti");
         for (User u : users.listUser())
             System.out.println(u.getUsername() + " - " + u.getStatus());
 
-        ServerNotificationService notificationService = new NotificationClass().start();    //RMI Callback
-        new RegistrationClass(users, RECOVERY_FILE_PATH, notificationService).start();  //RMI
-        new MultiThreadedServer(users, notificationService).start(); //TCP
+        ServerNotificationService notificationService = new NotificationClass().start();
+        new RegistrationClass(users, RECOVERY_FILE_PATH, notificationService).start();
+        
+        //create TCP Connection (multithreaded)
+        new MultiThreadedServer(users).start(); //TODO- passare il sistema di notifica anche
 
     }
 
@@ -35,7 +37,7 @@ public class ServerMainClass {
         try (ObjectInputStream input = new ObjectInputStream(
                 new FileInputStream(RECOVERY_FILE_PATH + FILENAME_utentiRegistrati));) {
             users = (UsersDB) input.readObject();
-            users.setAllOffline();
+            users.setOffline();
         }catch(EOFException e){
             //file vuoto
         }catch (Exception e) {
