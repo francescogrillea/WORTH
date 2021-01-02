@@ -30,10 +30,12 @@ public class User implements Serializable {
         return status;
     }
 
-    public void setStatus(boolean online){
-        if(online == true)
-            status = ONLINE;
-        else
-            status = OFFLINE;
+    public void setOnline(){
+        status = ONLINE;
     }
+
+    public void setOffline(){
+        status = OFFLINE;
+    }
+
 }
