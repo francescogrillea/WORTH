@@ -17,17 +17,15 @@ public class NotificationClass {
     }
     */
 
-    public CallbackServiceServer start() {
+    public ServerNotificationService start() {
         try {
-            CallbackServiceServer server = new CallbackServiceServer();
+            ServerNotificationService server = new ServerNotificationService();
             NotificationSystemServerInterface stub = (NotificationSystemServerInterface) UnicastRemoteObject.exportObject(server, 39000);
 
             LocateRegistry.createRegistry(RMI_CALLBACK_PORT);
             Registry r = LocateRegistry.getRegistry(RMI_CALLBACK_PORT);
             r.bind("NotificationService", stub);
 
-            //invio i valori aggiornati
-            //server.update(users);
             return server;
 
         } catch (Exception e) {
