@@ -45,48 +45,47 @@ public class ServerMainClass {
 
     }
     
-    public static void restoreBackup(){
-        //todo- da fare private
+    private static void restoreBackup(){
 
         try (ObjectInputStream input = new ObjectInputStream(
                 new FileInputStream(RECOVERY_FILE_PATH + FILENAME_utentiRegistrati));) {
             users = (UsersDB) input.readObject();
             users.setAllOffline();
-        }catch(EOFException e){
-            //file vuoto
+        }catch(FileNotFoundException e){
+            //TODO create utentiRegistrati.json
         }catch (Exception e) {
-            System.out.println(e);
+            e.printStackTrace();
         }
 
         File recoveryDir = new File(RECOVERY_FILE_PATH);
-        String projectName;
 
         for (File directory : recoveryDir.listFiles()) {
             if(directory.isDirectory()){
-                projectName = directory.getName();
+                String projectName = directory.getName();
 
-                try (ObjectInputStream input_members = new ObjectInputStream(
-                        new FileInputStream(RECOVERY_FILE_PATH + projectName + membersFile));
-                    ObjectInputStream input_todo = new ObjectInputStream(
-                        new FileInputStream(RECOVERY_FILE_PATH + projectName + todoFile));
-                    ObjectInputStream input_inprogress = new ObjectInputStream(
-                        new FileInputStream(RECOVERY_FILE_PATH + projectName + inprogressFile));
-                    ObjectInputStream input_toberevised = new ObjectInputStream(
-                        new FileInputStream(RECOVERY_FILE_PATH + projectName + toberevisedFile));
-                    ObjectInputStream input_done = new ObjectInputStream(
-                        new FileInputStream(RECOVERY_FILE_PATH + projectName + doneFile));) {
+                Project project = new Project(projectName);
 
+                for (File file : directory.listFiles()) {
+                    
+                    try(ObjectInputStream inputFile = new ObjectInputStream(
+                        new FileInputStream(RECOVERY_FILE_PATH + projectName + "/"+file.getName()))){
+                        
+                        if(file.getName().startsWith("members")){
+                            System.out.println("Leggo i membri");
+                            UsersDB members = (UsersDB) inputFile.readObject();
+                            project.restoreMembers(members);
+                        }
+                        else{
+                            Card card = (Card) inputFile.readObject();
+                            System.out.println("Leggo la card "+card.getName());
+                            project.restoreCard(card);
+                        }
 
-                    UsersDB members = (UsersDB) input_members.readObject();
-                    Cards todoList = (Cards) input_todo.readObject();
-                    Cards inprogressList = (Cards) input_inprogress.readObject();
-                    Cards toberevisedList = (Cards) input_toberevised.readObject();
-                    Cards doneList = (Cards) input_done.readObject();
-                    Project currentProject = new Project(projectName, members, todoList, inprogressList, toberevisedList, doneList);
-                    projects.put(projectName, currentProject);
-                }catch(Exception e){
-                    e.printStackTrace();
+                    }catch(Exception e){
+                        e.printStackTrace();
+                    }
                 }
+                projects.put(projectName, project);
             }
         }
     }
