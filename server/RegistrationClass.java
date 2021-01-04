@@ -16,13 +16,11 @@ public class RegistrationClass extends RemoteServer implements RegistrationInter
 
 
     private UsersDB users;
-    private String PATH;
     private ServerNotificationService notificationService;
 
-    public RegistrationClass(UsersDB u, String fp, ServerNotificationService ns) {
+    public RegistrationClass(UsersDB u, ServerNotificationService ns) {
         users = u;
         notificationService = ns;
-        PATH = fp;
 	}
 
 	//publish remote method
@@ -41,36 +39,32 @@ public class RegistrationClass extends RemoteServer implements RegistrationInter
 
 
     @Override
-    public synchronized String register(String nickname, String password) throws RemoteException {
+    public synchronized String register(String[] myArgs) throws RemoteException {
 
-        if(nickname.equals(null) || password.equals(null))
-            return "Inserire username e password validi";
+        if(myArgs.length != 3)
+            return "Error. Use registration username password";
+
+        String nickname = myArgs[1];
+        String password = myArgs[2];
 
         try{
             users.getUser(nickname);
         }catch(NullPointerException e){
-            return "Utente "+nickname+" gia' registrato.";
+            return "Error. User "+nickname+" already registered";
         }
 
         users.addUser(new User(nickname, password));
         notificationService.update(users);
 
-        //scrivi nel file json l'aggiornamento
-        /*
-            TODO
-                1. necessaria la scrittura ad ogni nuovo iscritto?
-                2. se si, penso sia necessario farla in mutua esclusione, piu' utenti possono registrarsi contemporaneamente e scrivere sul file
-        
-        */
         try(
             ObjectOutputStream output = new ObjectOutputStream(
-                new FileOutputStream(PATH+"utentiRegistrati.json"));){
+                new FileOutputStream(ServerMainClass.RECOVERY_FILE_PATH+"utentiRegistrati.json"));){
 
             output.writeObject(users);
         }catch(Exception e){
             System.out.println(e);
         }
-        return "Utente "+nickname+" inserito correttamente. Effettua il login";
+        return "User "+nickname+" has been registered correctly. Login to continue.";
     }
 
 
