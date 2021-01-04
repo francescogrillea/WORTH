@@ -28,8 +28,16 @@ public class Card implements Serializable{
         return description;
     }
 
-    public String getList(){
+    public ArrayList<String>getHistory(){
+        return history;
+    }
+
+    public String getListName(){
         return history.get(history.size()-1);
+    }
+
+    public void move(String newState){
+        history.add(newState);
     }
 
 }

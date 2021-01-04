@@ -83,6 +83,12 @@ public class RequestHandler implements Runnable {
                     else if(myArgs[0].equals("showCard"))       //FIND A CARD IN A PROJECT
                         reply = showCardHandler(myArgs);
                     
+                    else if(myArgs[0].equals("moveCard"))
+                        reply = moveCardHandler(myArgs);
+                    
+                    else if(myArgs[0].equals("getCardHistory"))
+                        reply = getCardHistoryHandler(myArgs);
+                    
                     else
                         reply = invalidOptionHandler();
                     
@@ -97,12 +103,103 @@ public class RequestHandler implements Runnable {
     }
 
 
-    //showCard(projectName, cardName)
+    private String getCardHistoryHandler(String[] myArgs){
+
+        if(myArgs.length != 3)
+            return "Error. Use getCardHistory projectName cardName";
+
+        if(logIn_effettuato == false)
+            return "Error. Login before do this";    
+        
+        String projectName = myArgs[1];
+        String cardName = myArgs[2];
+        String reply;
+        Project project;
+        synchronized(projectsLock){
+            project = projects.get(projectName);
+        }
+
+        try{
+            project.equals(null);
+        }catch(NullPointerException e){
+            return "Error. Project "+projectName+" not found";
+        }
+
+        synchronized(project.getLock()){
+
+            if(!(project.hasMember(this.user.getUsername())))
+                return "Error. User "+this.user.getUsername() +" isn't a member of the project.";
+            
+            Card card;
+            card = project.getCard(cardName.toLowerCase());
+            try{
+                card.equals(null);
+            }catch(NullPointerException e){
+                return "Error. Card "+cardName+" not found";
+            }
+            reply = cardName+ " history: ";
+            for (String s : card.getHistory())
+                reply = reply + s + ", ";    
+
+        }
+        
+        return reply;
+    }
+
+
+
+    //moveCard(projectName, cardName, listSrc, listDest)
+    private String moveCardHandler(String[] myArgs) {
+        
+        if(myArgs.length != 5)
+            return "Error. Use moveCard projectName cardName srcList destList";
+        
+        if(logIn_effettuato == false)
+            return "Error. Login before do this";
+
+        String projectName = myArgs[1];
+        String cardName = myArgs[2];
+        String srcList = myArgs[3];
+        String destList = myArgs[4];
+        Project project;
+
+        synchronized(projectsLock){
+            project = projects.get(projectName);
+        }
+
+        try{
+            project.equals(null);
+        }catch(NullPointerException e) {
+            return "Error. Project" + projectName +" not found";
+        }
+        
+
+        synchronized(project.getLock()){
+            
+            if(!(project.hasMember(this.user.getUsername())))
+                return "Error. User "+this.user.getUsername() +" isn't a member of the project.";
+            try{
+                Card card = project.moveCard(cardName, srcList.toLowerCase(), destList.toLowerCase());
+                ServerMainClass.saveFile(project.getName() + "/"+card.getName()+".json", card, Card.class);
+            }catch(NullPointerException e){
+                return "Error. Card or list not found"; //TODO- fare una distinzione tra Card e List not found?
+            }catch(IllegalStateException e){
+                return "Error. Can't move from "+srcList+" to "+destList;
+            }
+        }
+
+        return "Card moved from "+srcList +" to "+destList;
+    }
+
+    // showCard(projectName, cardName)
     private String showCardHandler(String[] myArgs) {
         
         if(myArgs.length != 3)
             return "Error. Use showCard projectName cardName";
 
+        if(logIn_effettuato == false)
+            return "Error. Login before do this";
+        
         String projectName = myArgs[1];
         String cardName = myArgs[2];
         String reply = "Result for card "+cardName+": ";
@@ -119,7 +216,11 @@ public class RequestHandler implements Runnable {
         }
 
         synchronized(project.getLock()){    //gestisco la concorrenza all'interno del singolo progetto
-            reply = reply + "\n\t"+project.findCard(cardName);
+            
+            if(!(project.hasMember(this.user.getUsername())))
+                return "Error. User "+this.user.getUsername() +" isn't a member of the project.";
+            Card card = project.getCard(cardName);   
+            reply = reply + "\n\t"+card.getName() + " | " + card.getListName() +" | "+ card.getDescription();
         }
         return reply;
     }
@@ -153,13 +254,16 @@ public class RequestHandler implements Runnable {
         synchronized(project.getLock()){        //gestisco la concorrenza all'interno del singolo progetto
             
             if(!(project.hasMember(this.user.getUsername())))
-                reply = "Error. User "+this.user.getUsername() +" isn't a member of the project.";
-            else if(!(project.addCard(cardName, description)))
-                reply = "Error. Card "+ cardName + " already exists";
-            else{
-                reply = "Card "+ cardName+ " is now in the project";
-                ServerMainClass.saveFile(project.getName() + "/cards_todo.json", project.getTodoCards(), Cards.class);
+                return "Error. User "+this.user.getUsername() +" isn't a member of the project.";
+            
+            Card card = project.addCard(cardName, description);
+            try{
+                card.equals(null);
+            }catch(NullPointerException e){
+                return "Error. Card "+cardName +" already exists";
             }
+            reply = "Card "+ cardName+ " is now in the project";
+            ServerMainClass.saveFile(project.getName() + "/"+cardName+".json", card, Card.class);
         }
 
         return reply;
@@ -308,11 +412,6 @@ public class RequestHandler implements Runnable {
             try {
                 Files.createDirectories(Paths.get(ServerMainClass.RECOVERY_FILE_PATH + name + "/"));
                 ServerMainClass.saveFile(project.getName() + "/members.json", project.getUsers(), UsersDB.class);
-                ServerMainClass.saveFile(project.getName() + ServerMainClass.todoFile, project.getTodoCards(), Cards.class);
-                ServerMainClass.saveFile(project.getName() + ServerMainClass.inprogressFile, project.getInprogressCards(), Cards.class);
-                ServerMainClass.saveFile(project.getName() + ServerMainClass.toberevisedFile, project.getToberevisedCards(), Cards.class);
-                ServerMainClass.saveFile(project.getName() + ServerMainClass.doneFile, project.getDoneCards(), Cards.class);
-
                 reply = "Progetto " + name +" creato con successo";
                 
             } catch (IOException e) {
@@ -490,7 +589,4 @@ public class RequestHandler implements Runnable {
     
         return reply;
     }
-    
-
-
 }
