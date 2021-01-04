@@ -33,6 +33,10 @@ public class UsersDB implements Serializable{
         return users.values();
     }
 
+    public boolean containsUser(String name){
+        return users.containsKey(name);
+    }
+
     //set users status offline
     public void setAllOffline(){
 

@@ -15,7 +15,7 @@ public class ClientMainClass {
     private static UsersDB localUsersDB;        //stuttura dati degli utenti (locale)
     private static boolean logIn_effettuato;    //flag per eseguire i contolli di sicurezza nelle chiamate dei metodi
     private static Registry registration_registry;
-    
+    private static RegistrationInterface registration;
     
     public static void main(String[] args) {
         
@@ -35,6 +35,7 @@ public class ClientMainClass {
         try{
             //RMI
             registration_registry = LocateRegistry.getRegistry(RMI_Port);
+            registration = (RegistrationInterface) registration_registry.lookup("RegisterUser");
             
             //Callbacks
             NotificationSystemClientInterface callbackObj = new ClientNotificationService(localUsersDB);
@@ -51,7 +52,6 @@ public class ClientMainClass {
             //cmd line
             BufferedReader cmd_line = new BufferedReader(new InputStreamReader(System.in));
 
-
             do{
                 System.out.printf("> ");
                 
@@ -61,42 +61,30 @@ public class ClientMainClass {
     
                     if(message.startsWith("register")){         //REGISTER- utente si registra alla piattaforma
                         registerFunction(myArgs);
-                    }
-                    
-                    else if(message.startsWith("login")){       //LOGIN- utente accede alla piattaforma                 
-    
-                        //TODO capire se va messo in un if come per il logout. Piu' invocazioni di login possono registratlo piu' volte?
-                        server.registerForCallback(stub);   //chiede al server di registrarsi per la callback
-                        
-                        writer.write(message+"\r\n");
-                        writer.flush();
-    
-                        result = reader.readLine();
-                        System.out.println("< "+result);
-
+                        continue;
                     }
                     else if(message.startsWith("listUsers")){   //LISTUSERS- visualizza lista utenti
                         listUsersFunction();
-                    
+                        continue;
+                    }
+                    else if(message.startsWith("listOnlineUsers")){     //LISTONLINEUSERS- visualizza lista utenti online
+                        listOnlineUsersFunction();
+                        continue;
+                    }
+                    else if(message.startsWith("login")){       //LOGIN- utente accede alla piattaforma                 
+                        //TODO capire se va messo in un if come per il logout. Piu' invocazioni di login possono registratlo piu' volte?
+                        server.registerForCallback(stub);   //chiede al server di registrarsi per la callback                                    
                     }
                     else if(message.startsWith("logout")){      //LOGOUT- utente si disconnette dalla piattaforma
-
                         if(logIn_effettuato)
-                            server.unregisterForCallback(stub);          //chiede al server di disiscriversi dal servizio di notifica                        
-
-                        writer.write(message+"\r\n");
-                        writer.flush();
-
-                        result = reader.readLine();
+                            server.unregisterForCallback(stub);    //chiede al server di disiscriversi dal servizio di notifica                       
+                    }
+                    //tutte le altre operazioni vengono gestite direttamente dal server
+                    writer.write(message+"\r\n");   //send command to server
+                    writer.flush();
+                    while(!(result = reader.readLine()).equals("")) //read response from server
                         System.out.println("< "+result);
 
-                    }
-                    else{   //se non viene riconosciuto il comando stampa un messaggio di aiuto
-                        result = "Invalid choice";
-                        System.out.println("< "+result);
-                        printMenu();
-
-                    }
                 }catch(Exception e){
                     System.out.println("An error occurred.");
                     printMenu();
@@ -109,33 +97,30 @@ public class ClientMainClass {
         }
     }
 
-    public static void printMenu(){
+
+    public static void printMenu() {
         System.out.println("Operazioni disponibili:");
         System.out.println("\t\"register username password\" -to register a user");
         System.out.println("\t\"login username password\" -to login");
         System.out.println("\t\"logout username\" -to logout");
         System.out.println("\t\"listUsers\" -to show all registered users");
+        System.out.println("\t\"listOnlineUsers\" -to show online users");
+        System.out.println("\t\"createProject projectName\" -to create a new project");
+        System.out.println("\t\"listProjects\" -to show all projects of a user");
+        System.out.println("\t\"showMembers projectName\" -to show all users in a project");
+        System.out.println("\t\"addMember projectName username\" -add a user to a project");
 
     }
 
     public static void registerFunction(String[] myArgs) throws RemoteException, NotBoundException {
         
         String result;
-        
-        if(myArgs.length != 3){
-            result = "Error. Use: register username password";
-            System.out.println("< "+result);
-            return;
-        }
 
-        String username = myArgs[1];
-        String password = myArgs[2];
         if(logIn_effettuato == true)
             result = "Error. Log out before new registration";
-        else{
-            RegistrationInterface registration = (RegistrationInterface) registration_registry.lookup("RegisterUser");
-            result = registration.register(username, password);    
-        }
+        else
+            result = registration.register(myArgs);    
+        
         System.out.println("< "+result);
     }
 
@@ -146,4 +131,14 @@ public class ClientMainClass {
         for (User u : localUsersDB.listUser())
             System.out.println("\t"+u.getUsername() + " - "+ u.getStatus());
     }
+
+    private static void listOnlineUsersFunction() {
+        String result = "List of all online users";
+        System.out.println("< "+result);
+
+        for (User u : localUsersDB.listUser())
+            if(u.getStatus().equals("Online"))
+                System.out.println("\t"+u.getUsername() + " - "+ u.getStatus());
+    }
+
 }
