@@ -62,6 +62,9 @@ public class RequestHandler implements Runnable {
                     else if (myArgs[0].equals("createProject"))  // CREATE PROJECT
                         reply = createProjectHandler(myArgs);
 
+                    else if(myArgs[0].equals("cancelProject"))    //DELETE A PROJECT
+                        reply = cancelProjectHandler(myArgs);
+
                     else if (myArgs[0].equals("listProjects"))  // LIST USER's PROJECTS
                         reply = listProjectsHandler(myArgs);
                     
@@ -70,9 +73,6 @@ public class RequestHandler implements Runnable {
                     
                     else if(myArgs[0].equals("addMember"))     //ADD A MEMBER TO A PROJECT
                         reply = addMemberHandler(myArgs);
-                    
-                    else if(myArgs[0].equals("cancelProject"))    //DELETE A PROJECT
-                        reply = cancelProjectHandler(myArgs);
                     
                     else if(myArgs[0].equals("addCard"))        //ADD A CARD TO A PROJECT
                         reply = addCardHandler(myArgs);
@@ -83,13 +83,15 @@ public class RequestHandler implements Runnable {
                     else if(myArgs[0].equals("showCard"))       //FIND A CARD IN A PROJECT
                         reply = showCardHandler(myArgs);
                     
-                    else if(myArgs[0].equals("moveCard"))
+                    else if(myArgs[0].equals("moveCard"))       //MOVE A CARD
                         reply = moveCardHandler(myArgs);
                     
-                    else if(myArgs[0].equals("getCardHistory"))
+                    else if(myArgs[0].equals("getCardHistory")) //GET CARD HISTORY
                         reply = getCardHistoryHandler(myArgs);
                     
-                    else
+                    else if(myArgs[0].equals("joinChat"))
+                        reply = joinChatHandler(myArgs);
+                    else                                        //INVALID OPTION
                         reply = invalidOptionHandler();
                     
                     writer.write(reply + "\n\r\n");
@@ -103,19 +105,56 @@ public class RequestHandler implements Runnable {
     }
 
 
-    private String getCardHistoryHandler(String[] myArgs){
+    private String joinChatHandler(String[] myArgs) {
+        
+        if(myArgs.length != 2)
+            return "Error. Use joinChat projectName";
+        
+        if(!logIn_effettuato)
+            return "Error. Login before do this";    
+        
+        String projectName = myArgs[1];
+        String ip;
+        int port;
+
+        Project project;
+        synchronized(projects){
+            project = projects.get(projectName);
+        }
+
+        try{
+            project.equals(null);
+        }catch(NullPointerException e){
+            return "Error. Project "+ projectName +" not found";
+        }
+
+        synchronized(project.getLock()){
+
+            if(!(project.hasMember(this.user.getUsername())))
+                return "Error. User "+this.user.getUsername() +" isn't a member of the project.";
+
+            ip = project.getIP();
+            port = project.getPort();
+        }
+
+        
+        return this.user.getUsername() +" "+projectName + " " + ip + " " + port;
+    }
+
+    private String getCardHistoryHandler(String[] myArgs) {
 
         if(myArgs.length != 3)
             return "Error. Use getCardHistory projectName cardName";
 
-        if(logIn_effettuato == false)
+        if(!logIn_effettuato)
             return "Error. Login before do this";    
         
         String projectName = myArgs[1];
         String cardName = myArgs[2];
         String reply;
         Project project;
-        synchronized(projectsLock){
+
+        synchronized(projectsLock){         //gestisco la concorrenza nell'accesso ai vari progetti
             project = projects.get(projectName);
         }
 
@@ -125,7 +164,7 @@ public class RequestHandler implements Runnable {
             return "Error. Project "+projectName+" not found";
         }
 
-        synchronized(project.getLock()){
+        synchronized(project.getLock()){        //gestisco la concorrenza all'interno del singolo progetto
 
             if(!(project.hasMember(this.user.getUsername())))
                 return "Error. User "+this.user.getUsername() +" isn't a member of the project.";
@@ -154,7 +193,7 @@ public class RequestHandler implements Runnable {
         if(myArgs.length != 5)
             return "Error. Use moveCard projectName cardName srcList destList";
         
-        if(logIn_effettuato == false)
+        if(!logIn_effettuato)
             return "Error. Login before do this";
 
         String projectName = myArgs[1];
@@ -163,7 +202,7 @@ public class RequestHandler implements Runnable {
         String destList = myArgs[4];
         Project project;
 
-        synchronized(projectsLock){
+        synchronized(projectsLock){     //gestisco la concorrenza nell'accesso ai vari progetti
             project = projects.get(projectName);
         }
 
@@ -174,15 +213,15 @@ public class RequestHandler implements Runnable {
         }
         
 
-        synchronized(project.getLock()){
+        synchronized(project.getLock()){        //gestisco la concorrenza all'interno del singolo progetto
             
             if(!(project.hasMember(this.user.getUsername())))
-                return "Error. User "+this.user.getUsername() +" isn't a member of the project.";
+                return "Error. You are not a member of the project.";
             try{
                 Card card = project.moveCard(cardName, srcList.toLowerCase(), destList.toLowerCase());
                 ServerMainClass.saveFile(project.getName() + "/"+card.getName()+".json", card, Card.class);
             }catch(NullPointerException e){
-                return "Error. Card or list not found"; //TODO- fare una distinzione tra Card e List not found?
+                return "Error. Card or list not found"; //TODO ? fare una distinzione tra Card e List not found?
             }catch(IllegalStateException e){
                 return "Error. Can't move from "+srcList+" to "+destList;
             }
@@ -197,7 +236,7 @@ public class RequestHandler implements Runnable {
         if(myArgs.length != 3)
             return "Error. Use showCard projectName cardName";
 
-        if(logIn_effettuato == false)
+        if(!logIn_effettuato)
             return "Error. Login before do this";
         
         String projectName = myArgs[1];
@@ -218,7 +257,7 @@ public class RequestHandler implements Runnable {
         synchronized(project.getLock()){    //gestisco la concorrenza all'interno del singolo progetto
             
             if(!(project.hasMember(this.user.getUsername())))
-                return "Error. User "+this.user.getUsername() +" isn't a member of the project.";
+                return "Error. You are not a member of the project.";
             Card card = project.getCard(cardName);   
             reply = reply + "\n\t"+card.getName() + " | " + card.getListName() +" | "+ card.getDescription();
         }
@@ -231,7 +270,7 @@ public class RequestHandler implements Runnable {
         if(myArgs.length != 4)
             return "Error. Use: addCard projectName cardName description";
 
-        if(logIn_effettuato == false)
+        if(!logIn_effettuato)
             return "Error. Login before do this";
 
         String projectName = myArgs[1];
@@ -254,7 +293,7 @@ public class RequestHandler implements Runnable {
         synchronized(project.getLock()){        //gestisco la concorrenza all'interno del singolo progetto
             
             if(!(project.hasMember(this.user.getUsername())))
-                return "Error. User "+this.user.getUsername() +" isn't a member of the project.";
+                return "Error. You are not a member of the project.";
             
             Card card = project.addCard(cardName, description);
             try{
@@ -275,7 +314,7 @@ public class RequestHandler implements Runnable {
         if(myArgs.length != 2)
             return "Error. Use: showCards projectName";
 
-        if(logIn_effettuato == false)
+        if(!logIn_effettuato)
             return "Error. Login before do this";
 
         String projectName = myArgs[1];
@@ -294,13 +333,12 @@ public class RequestHandler implements Runnable {
         synchronized(project.getLock()){    //gestisco la concorrenza all'interno del singolo progetto
 
             if(!project.hasMember(this.user.getUsername()))
-                reply = "Error. User "+this.user.getUsername() +" isn't a member of the project.";
+                reply = "Error. You are not a member of the project.";
             else{            
                 reply = "Project "+projectName+"'s cards:";
                 reply = reply +"\n" + project.getCards();
             }
         }
-        
         return reply;
     }
 
@@ -311,7 +349,7 @@ public class RequestHandler implements Runnable {
         if(myArgs.length != 3)
         return "Error. Use: addMember projectName newMember";
         
-        if(logIn_effettuato == false)
+        if(!logIn_effettuato)
             return "Error. Login before do this";
         
         String reply = null;
@@ -333,6 +371,7 @@ public class RequestHandler implements Runnable {
         synchronized(projectsLock){         //gestisco la concorrenza nell'accesso ai vari progetti
             try{
                 project = projects.get(projectName);
+                project.equals(null);
             }catch(NullPointerException e){
                 return "Error. Project "+projectName +" not found";
             }
@@ -341,7 +380,7 @@ public class RequestHandler implements Runnable {
         synchronized(project.getLock()){    //gestisco la concorrenza all'interno del singolo progetto
             
             if(!(project.hasMember(this.user.getUsername())))
-                reply = "Error. User "+this.user.getUsername() +" isn't a member of the project.";
+                reply = "Error. You are not a member of the project.";
             else if(project.addMember(u)){
                 ServerMainClass.saveFile(project.getName() + "/members.json", project.getUsers(), UsersDB.class);
                 reply = "User "+ u.getUsername() +" is now member of the project";
@@ -366,7 +405,7 @@ public class RequestHandler implements Runnable {
         String reply = projectName + " members:";
         Project project;
 
-        synchronized(projectsLock){
+        synchronized(projectsLock){             //gestisco la concorrenza nell'accesso ai vari progetti
             project = projects.get(projectName);
         }
 
@@ -378,7 +417,7 @@ public class RequestHandler implements Runnable {
 
         synchronized(project.getLock()){
             if(!(project.hasMember(this.user.getUsername())))
-                return "Error. User "+this.user.getUsername() +" isn't a member of the project.";
+                return "Error. You are not a member of the project.";
     
             for (User u : project.getMembers())
                 reply = reply + "\n\t"+ u.getUsername();
@@ -386,75 +425,6 @@ public class RequestHandler implements Runnable {
         return reply;
     }
 
-    //createProject(projectName)
-    private String createProjectHandler(String[] myArgs) {
-
-        if (myArgs.length != 2)
-            return "Error. Use: createProject projectName";
-        
-        if(!logIn_effettuato)
-            return "Error. Login before do this";
-
-        String name = myArgs[1];
-        String reply = null;
-        
-        
-        synchronized (projectsLock) {
-
-            try{
-                projects.get(name).equals(null);     //se esiste un progetto con lo stesso nome
-                return "Error. Project "+name+" already exists";
-            }catch(Exception e){ }
-
-            Project project = new Project(name, user);
-            projects.put(name, project);    //aggiorno la struttura dati
-
-            try {
-                Files.createDirectories(Paths.get(ServerMainClass.RECOVERY_FILE_PATH + name + "/"));
-                ServerMainClass.saveFile(project.getName() + "/members.json", project.getUsers(), UsersDB.class);
-                reply = "Progetto " + name +" creato con successo";
-                
-            } catch (IOException e) {
-                reply = "Error. Cannot save project";
-            }
-        }
-    
-        return reply;
-    }
-
-    //cancelProject(projectName)
-    private String cancelProjectHandler(String[] myArgs) {
-    
-        if(myArgs.length != 2)
-            return "Error. Use: cancelProject projectName";
-    
-        if(logIn_effettuato == false)
-            return "Error. Login before do this";
-    
-        String reply = null;
-        String projectName = myArgs[1];
-    
-        synchronized(projectsLock){
-                
-            try{
-                Project project = projects.get(projectName);
-                if(!(project.hasMember(this.user.getUsername())))     //se l'utente non e' membro del progetto non puo' eliminarlo
-                    return "Error. User "+this.user.getUsername() +" isn't a member of the project.";
-    
-                projects.remove(projectName);
-                File directory = new File(ServerMainClass.RECOVERY_FILE_PATH+projectName);
-    
-                for (File file : directory.listFiles()) 
-                    file.delete();
-                directory.delete();
-                reply = "Project "+projectName +" removed";
-            }catch(NullPointerException e){
-                return "Error. Project "+projectName +" not found.";
-            }        
-        }
-        return reply;
-    }
-    
 
     //listProjects()
     private String listProjectsHandler(String[] myArgs) {
@@ -468,24 +438,101 @@ public class RequestHandler implements Runnable {
         String username = user.getUsername();
         String reply = "User "+username+" is member of: ";
 
-        synchronized(usersLock){
+        synchronized(usersLock){    //gestisco la concorrenza nell'accesso al 'database' degli utenti
             
             if(!(users.containsUser(username))) //se l'utente non esiste
                 reply = "Error. User not found";
             else if(!(username.equals(user.getUsername()))) //se si vuole visualizzare la lista di un altro utente
                 reply = "Error. You don't have the permission to see " + username +"'s projects";
             else{
-                synchronized(projectsLock){
+                synchronized(projectsLock){         //gestisco la concorrenza nell'accesso ai vari progetti
                     for (Project project : projects.values()) {
-                        //TODO- lock each project ? Think yes
-                        if(project.getUsers().containsUser(username))
-                            reply = reply + "\n\t" + project.getName();
+                        synchronized(project.getLock()){        //gestisco la concorrenza all'interno del singolo progetto
+                            if(project.getUsers().containsUser(username))
+                                reply = reply + "\n\t" + project.getName();
+                        }
                     }
                 }
             }
         }
         return reply;
     }
+
+
+    //cancelProject(projectName)
+    private String cancelProjectHandler(String[] myArgs) {
+    
+        if(myArgs.length != 2)
+            return "Error. Use: cancelProject projectName";
+    
+        if(logIn_effettuato == false)
+            return "Error. Login before do this";
+    
+        String reply = null;
+        String projectName = myArgs[1];
+
+        Project project;
+        
+        
+        synchronized(projectsLock){             //gestisco la concorrenza nell'accesso ai vari progetti
+            try{
+                project = projects.get(projectName);
+                project.equals(null);
+            }catch(NullPointerException e){
+                return "Error. Project "+ projectName +" not found";
+            }
+            
+            if(!(project.hasMember(this.user.getUsername())))     //se l'utente non e' membro del progetto non puo' eliminarlo
+                return "Error. You are not a member of the project.";
+    
+            projects.remove(projectName);
+            File directory = new File(ServerMainClass.RECOVERY_FILE_PATH+projectName);
+    
+            for (File file : directory.listFiles()) 
+                file.delete();
+            directory.delete();
+            reply = "Project "+projectName +" removed";
+        }
+        return reply;
+    }
+
+    
+    //createProject(projectName)
+    private String createProjectHandler(String[] myArgs) {
+
+        if (myArgs.length != 2)
+            return "Error. Use: createProject projectName";
+        
+        if(!logIn_effettuato)
+            return "Error. Login before do this";
+
+        String projectName = myArgs[1];
+        String reply = null;
+        
+        
+        synchronized (projectsLock) {
+
+            try{
+                projects.get(projectName).equals(null);     //se esiste un progetto con lo stesso nome
+                return "Error. Project "+projectName+" already exists";
+            }catch(Exception e){ }
+
+            Project project = new Project(projectName, user);
+            projects.put(projectName, project);    //aggiorno la struttura dati
+
+            try {
+                Files.createDirectories(Paths.get(ServerMainClass.RECOVERY_FILE_PATH + projectName + "/"));
+                ServerMainClass.saveFile(project.getName() + "/members.json", project.getUsers(), UsersDB.class);
+                reply = "New project " + projectName +" created";
+                
+            } catch (IOException e) {
+                reply = "Error. Cannot save project";
+            }
+        }
+    
+        return reply;
+    }
+
 
     //login(username, password)
     private String loginHandler(String[] myArgs) {
@@ -500,7 +547,7 @@ public class RequestHandler implements Runnable {
         String pass = myArgs[2];
         String reply = null;
 
-        synchronized(usersLock){     //accedo in mutua esclusione alla struttura condivisa (users), eventualmente modificando il campo Status di un utente
+        synchronized(usersLock){     //gestisco la concorrenza nell'accesso al 'database' degli utenti
             
             User currentUser = users.getUser(name);
     
@@ -516,19 +563,20 @@ public class RequestHandler implements Runnable {
                 reply = "Error. " + currentUser.getUsername() + " already logged in";
             else {
                 reply = "User " + name + " logged in";
-                user = currentUser;
-                user.setOnline();
+                this.user = currentUser;
+                this.user.setOnline();
                 logIn_effettuato = true;
                 try {
                     notificationService.update(this.users);            //notifico la modifica
                 } catch (RemoteException e) {
-                    System.out.println("Cannot do callbacks");
+                    System.out.println("System_error: cannot do callback");
                 }
             }
         }
         return reply;
     }
     
+
     //logout(username)
     private String logoutHandler(String[] myArgs) {
 
@@ -541,7 +589,7 @@ public class RequestHandler implements Runnable {
             String name = myArgs[1];
         String reply = null;
 
-        synchronized(usersLock){         //accedo in mutua esclusione alla struttura condivisa (users), eventualmente modificando il campo Status di un utente
+        synchronized(usersLock){         //gestisco la concorrenza nell'accesso al 'database' degli utenti
             
             User currentUser = users.getUser(name);
     
@@ -561,13 +609,14 @@ public class RequestHandler implements Runnable {
                 try {
                     notificationService.update(this.users);            //notifico la modifica
                 } catch (RemoteException e) {
-                    System.out.println("Cannot do callbacks");
+                    System.out.println("System_error: cannot do callback");
                 }
             }
         }
 
         return reply;
     }
+
 
     //invalid option
     private String invalidOptionHandler() {
@@ -586,7 +635,11 @@ public class RequestHandler implements Runnable {
         reply = reply + "\n\t\"addCard projectName cardName description\"- to add a new card to a project";
         reply = reply + "\n\t\"showCards projectName\"- to show all cards of a project";
         reply = reply + "\n\t\"showCard projectName cardName\"- get a card of a project";
-    
+        reply = reply + "\n\t\"moveCard projectName cardName startList destinationList\"- to move a card from a list to another";
+        reply = reply + "\n\t\"getCardHistory projectName cardName\"- to show all the past states of a card";
+        reply = reply + "\n\t\"joinChat projectName\"- to join the project's chat";
+        reply = reply + "\n\t\"sendChat projectName message\"- to send a message to the project's chat";
+        reply = reply + "\n\t\"readChat projectName\"- to read all message in the project's chat";
         return reply;
     }
 }
