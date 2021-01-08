@@ -17,6 +17,8 @@ public class Project {
     private ArrayList<Card> toBeRevised;
     private ArrayList<Card> done;
     private Object lock;
+    private String chatIP;
+    private int port;
 
 
     public Project(String n, User firstUser){   //quando viene creato un progetto   
@@ -55,6 +57,22 @@ public class Project {
     //Ritorna un oggetto utilizzato per la concorrenza
     public Object getLock(){
         return lock;
+    }
+
+    public void setIP(String ip){
+        chatIP = ip;
+    }
+
+    public String getIP(){
+        return chatIP;
+    }
+
+    public int getPort(){
+        return port;
+    }
+
+    public void setPort(int p){
+        port = p;
     }
 
     //Ritorna la lista di Cards in stato To do 
