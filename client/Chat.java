@@ -38,7 +38,7 @@ public class Chat implements Runnable {
             è necessario aggiornare gli indirizzi multicast per la chat (altrimenti si potrebbe verificare
             che un utente stia scrivendo su una chat di un progetto vecchio ed eliminato di cui non fa parte)
     */
-    public boolean isValid() {
+    public synchronized boolean isValid() {
         return IS_LISTENING;
     }
 
@@ -59,7 +59,7 @@ public class Chat implements Runnable {
 
                 String message = new String(datagram.getData(), "US-ASCII");
                 System.out.println("system: ricevuto " + message +" in multicast");
-                if(message.startsWith("close"))
+                if(message.startsWith("system: close"))
                     break;
                 
                 synchronized(unreadMessages){
