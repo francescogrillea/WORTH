@@ -128,4 +128,8 @@ public class ServerMainClass {
         return out;
     }
 
+    public static int getPort(){
+        return PORT;
+    }
+
 }

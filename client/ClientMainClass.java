@@ -7,11 +7,7 @@ import java.rmi.*;
 import java.rmi.registry.*;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
-
-/*
-TODO
-
-*/
+                 
 
 public class ClientMainClass {
 
@@ -38,7 +34,7 @@ public class ClientMainClass {
         BufferedWriter writer;
 
         System.out.println("Welcome in WORTH");
-        System.out.println("Please login or register to proceed");
+        System.out.println("Please login or register to proceed. If you need help send \"help\"");
 
         String message = null;
         String result = null;
@@ -67,6 +63,7 @@ public class ClientMainClass {
             BufferedReader cmd_line = new BufferedReader(new InputStreamReader(System.in));
 
             do{
+                System.out.println();
                 System.out.printf("> ");
                 
                 try{
@@ -100,9 +97,10 @@ public class ClientMainClass {
                         continue;
                     }
                     else if(message.startsWith("readChat")){
-                        for (String msg : readChatHandler(myArgs)) 
-                            System.out.println("< "+ msg);
-                        
+                        ArrayList<String> messages = readChatHandler(myArgs);
+                        System.out.println("< You have "+ messages.size() +" unread messages: ");
+                        for (String msg : messages) 
+                            System.out.println("\t"+ msg);
                         continue;
                     }
 
@@ -137,7 +135,6 @@ public class ClientMainClass {
     }
 
 
-
     private static ArrayList<String> readChatHandler(String[] myArgs){
 
         ArrayList<String> out = new ArrayList<String>();
@@ -145,7 +142,6 @@ public class ClientMainClass {
             out.add("Error. Use readChat projectName");
             return out;
         }
-            
 
         String projectName = myArgs[1];
         Chat chat = chats.get(projectName);
@@ -157,7 +153,12 @@ public class ClientMainClass {
             return out;
         }
 
-        out = (ArrayList<String>)chat.getMessages();
+        if(!chat.isValid()){
+            chats.remove(projectName);
+            out.add("Error. You're trying to read the chat from a deleted project");
+        }
+        else
+            out = (ArrayList<String>)chat.getMessages();
         return out;
     }
 
@@ -176,8 +177,12 @@ public class ClientMainClass {
             return "Error. You have not joined this chat";
         }
 
-        String message = "";
+        if(!chat.isValid()){
+            chats.remove(projectName);
+            return "Error. You're trying to write in the chat of a deleted project";
+        }
 
+        String message = "";
         for (int i = 2; i < myArgs.length; i++) 
             message = message + myArgs[i]+" ";
         
@@ -206,7 +211,7 @@ public class ClientMainClass {
     }
 
     private static void listOnlineUsersFunction() {
-        String result = "List of all online users";
+        String result = "Online users";
         System.out.println("< "+result);
 
         for (User u : localUsersDB.listUser())

@@ -16,19 +16,14 @@ public class RequestHandler implements Runnable {
     private HashMap<String, Project> projects;
     private User user;
     private boolean logIn_effettuato;
-    private Object usersLock; // accedo in mutua esclusione quando vado ad effettuare modifiche
-    private Object projectsLock;
 
-    public RequestHandler(Socket c, UsersDB u, ServerNotificationService ns, Object ul, HashMap<String, Project> p,
-            Object pl) throws IOException {
+    public RequestHandler(Socket c, UsersDB u, ServerNotificationService ns,  HashMap<String, Project> p) throws IOException {
         clientSocket = c;
         users = u;
         user = null;
         logIn_effettuato = false;
         notificationService = ns;
-        usersLock = ul;
         projects = p;
-        projectsLock = pl;
     }
 
     @Override
@@ -105,6 +100,7 @@ public class RequestHandler implements Runnable {
     }
 
 
+    //joinChat(projectName)
     private String joinChatHandler(String[] myArgs) {
         
         if(myArgs.length != 2)
@@ -118,7 +114,7 @@ public class RequestHandler implements Runnable {
         int port;
 
         Project project;
-        synchronized(projects){
+        synchronized(projects){             //gestisco la concorrenza nell'accesso ai vari progetti
             project = projects.get(projectName);
         }
 
@@ -128,19 +124,18 @@ public class RequestHandler implements Runnable {
             return "Error. Project "+ projectName +" not found";
         }
 
-        synchronized(project.getLock()){
-
+        synchronized(project){              //gestisco la concorrenza all'interno del singolo progetto
             if(!(project.hasMember(this.user.getUsername())))
                 return "Error. User "+this.user.getUsername() +" isn't a member of the project.";
 
             ip = project.getIP();
             port = project.getPort();
         }
-
-        
         return this.user.getUsername() +" "+projectName + " " + ip + " " + port;
     }
 
+
+    //getCardHistory(projectName, cardName)
     private String getCardHistoryHandler(String[] myArgs) {
 
         if(myArgs.length != 3)
@@ -154,7 +149,7 @@ public class RequestHandler implements Runnable {
         String reply;
         Project project;
 
-        synchronized(projectsLock){         //gestisco la concorrenza nell'accesso ai vari progetti
+        synchronized(projects){         //gestisco la concorrenza nell'accesso ai vari progetti
             project = projects.get(projectName);
         }
 
@@ -164,7 +159,7 @@ public class RequestHandler implements Runnable {
             return "Error. Project "+projectName+" not found";
         }
 
-        synchronized(project.getLock()){        //gestisco la concorrenza all'interno del singolo progetto
+        synchronized(project){        //gestisco la concorrenza all'interno del singolo progetto
 
             if(!(project.hasMember(this.user.getUsername())))
                 return "Error. User "+this.user.getUsername() +" isn't a member of the project.";
@@ -202,28 +197,29 @@ public class RequestHandler implements Runnable {
         String destList = myArgs[4];
         Project project;
 
-        synchronized(projectsLock){     //gestisco la concorrenza nell'accesso ai vari progetti
+        synchronized(projects){     //gestisco la concorrenza nell'accesso ai vari progetti
             project = projects.get(projectName);
         }
 
         try{
-            project.equals(null);
+            project.equals(null); 
         }catch(NullPointerException e) {
             return "Error. Project" + projectName +" not found";
         }
-        
 
-        synchronized(project.getLock()){        //gestisco la concorrenza all'interno del singolo progetto
+        synchronized(project){        //gestisco la concorrenza all'interno del singolo progetto
             
             if(!(project.hasMember(this.user.getUsername())))
                 return "Error. You are not a member of the project.";
             try{
                 Card card = project.moveCard(cardName, srcList.toLowerCase(), destList.toLowerCase());
+                String msg = "User "+this.user.getUsername() + " moved card " + cardName +" from " + srcList + " to " + destList;
+                project.sendMessage(msg);
                 ServerMainClass.saveFile(project.getName() + "/"+card.getName()+".json", card, Card.class);
             }catch(NullPointerException e){
-                return "Error. Card or list not found"; //TODO ? fare una distinzione tra Card e List not found?
-            }catch(IllegalStateException e){
-                return "Error. Can't move from "+srcList+" to "+destList;
+                return "Error. Card " + cardName + " not found";
+            }catch(Exception e){
+                return "Error. "+e.getMessage();
             }
         }
 
@@ -244,7 +240,7 @@ public class RequestHandler implements Runnable {
         String reply = "Result for card "+cardName+": ";
         Project project;
 
-        synchronized(projectsLock){     //gestisco la concorrenza nell'accesso ai vari progetti
+        synchronized(projects){     //gestisco la concorrenza nell'accesso ai vari progetti
             project = projects.get(projectName);
         }
 
@@ -254,7 +250,7 @@ public class RequestHandler implements Runnable {
             return "Error. Project "+ projectName +" not found.";
         }
 
-        synchronized(project.getLock()){    //gestisco la concorrenza all'interno del singolo progetto
+        synchronized(project){    //gestisco la concorrenza all'interno del singolo progetto
             
             if(!(project.hasMember(this.user.getUsername())))
                 return "Error. You are not a member of the project.";
@@ -280,7 +276,7 @@ public class RequestHandler implements Runnable {
         String reply;
         Project project;
         
-        synchronized(projectsLock){                 //gestisco la concorrenza nell'accesso ai vari progetti
+        synchronized(projects){                 //gestisco la concorrenza nell'accesso ai vari progetti
             project = projects.get(projectName);      
         }
 
@@ -290,8 +286,8 @@ public class RequestHandler implements Runnable {
             return "Error. Project "+projectName +" not found";
         }
 
-        synchronized(project.getLock()){        //gestisco la concorrenza all'interno del singolo progetto
-            
+        synchronized(project){        //gestisco la concorrenza all'interno del singolo progetto
+
             if(!(project.hasMember(this.user.getUsername())))
                 return "Error. You are not a member of the project.";
             
@@ -320,7 +316,7 @@ public class RequestHandler implements Runnable {
         String projectName = myArgs[1];
         String reply;
         Project project;
-        synchronized(projectsLock){         //gestisco la concorrenza nell'accesso ai vari progetti
+        synchronized(projects){         //gestisco la concorrenza nell'accesso ai vari progetti
             project = projects.get(projectName);
         }
 
@@ -330,7 +326,7 @@ public class RequestHandler implements Runnable {
             return "Error. Projet "+projectName+" not found";
         }
 
-        synchronized(project.getLock()){    //gestisco la concorrenza all'interno del singolo progetto
+        synchronized(project){    //gestisco la concorrenza all'interno del singolo progetto
 
             if(!project.hasMember(this.user.getUsername()))
                 reply = "Error. You are not a member of the project.";
@@ -359,7 +355,7 @@ public class RequestHandler implements Runnable {
         User u;
         Project project;
 
-        synchronized(usersLock){    //gestisco la concorrenza nell'accesso al 'database' degli utenti
+        synchronized(users){    //gestisco la concorrenza nell'accesso al 'database' degli utenti
             try{
                 u = users.getUser(name);
                 u.equals(null);       
@@ -368,7 +364,7 @@ public class RequestHandler implements Runnable {
             }
         }
 
-        synchronized(projectsLock){         //gestisco la concorrenza nell'accesso ai vari progetti
+        synchronized(projects){         //gestisco la concorrenza nell'accesso ai vari progetti
             try{
                 project = projects.get(projectName);
                 project.equals(null);
@@ -377,7 +373,7 @@ public class RequestHandler implements Runnable {
             }
         }
 
-        synchronized(project.getLock()){    //gestisco la concorrenza all'interno del singolo progetto
+        synchronized(project){    //gestisco la concorrenza all'interno del singolo progetto
             
             if(!(project.hasMember(this.user.getUsername())))
                 reply = "Error. You are not a member of the project.";
@@ -405,7 +401,7 @@ public class RequestHandler implements Runnable {
         String reply = projectName + " members:";
         Project project;
 
-        synchronized(projectsLock){             //gestisco la concorrenza nell'accesso ai vari progetti
+        synchronized(projects){             //gestisco la concorrenza nell'accesso ai vari progetti
             project = projects.get(projectName);
         }
 
@@ -415,7 +411,7 @@ public class RequestHandler implements Runnable {
             return "Error. Project "+ projectName +" not found";
         }
 
-        synchronized(project.getLock()){
+        synchronized(project){
             if(!(project.hasMember(this.user.getUsername())))
                 return "Error. You are not a member of the project.";
     
@@ -438,16 +434,16 @@ public class RequestHandler implements Runnable {
         String username = user.getUsername();
         String reply = "User "+username+" is member of: ";
 
-        synchronized(usersLock){    //gestisco la concorrenza nell'accesso al 'database' degli utenti
+        synchronized(users){    //gestisco la concorrenza nell'accesso al 'database' degli utenti
             
             if(!(users.containsUser(username))) //se l'utente non esiste
                 reply = "Error. User not found";
             else if(!(username.equals(user.getUsername()))) //se si vuole visualizzare la lista di un altro utente
                 reply = "Error. You don't have the permission to see " + username +"'s projects";
             else{
-                synchronized(projectsLock){         //gestisco la concorrenza nell'accesso ai vari progetti
+                synchronized(projects){         //gestisco la concorrenza nell'accesso ai vari progetti
                     for (Project project : projects.values()) {
-                        synchronized(project.getLock()){        //gestisco la concorrenza all'interno del singolo progetto
+                        synchronized(project){        //gestisco la concorrenza all'interno del singolo progetto
                             if(project.getUsers().containsUser(username))
                                 reply = reply + "\n\t" + project.getName();
                         }
@@ -474,16 +470,21 @@ public class RequestHandler implements Runnable {
         Project project;
         
         
-        synchronized(projectsLock){             //gestisco la concorrenza nell'accesso ai vari progetti
+        synchronized(projects){             //gestisco la concorrenza nell'accesso ai vari progetti
             try{
                 project = projects.get(projectName);
                 project.equals(null);
             }catch(NullPointerException e){
                 return "Error. Project "+ projectName +" not found";
             }
-            
-            if(!(project.hasMember(this.user.getUsername())))     //se l'utente non e' membro del progetto non puo' eliminarlo
-                return "Error. You are not a member of the project.";
+            synchronized(project){          //gestisco la concorrenza all'interno del singolo progetto
+
+                if(!(project.hasMember(this.user.getUsername())))     //se l'utente non e' membro del progetto non puo' eliminarlo
+                    return "Error. You are not a member of the project.";
+                if(!project.canDelete())
+                    return "Error. Before deleting the project, all cards must be done";
+                project.sendMessage("close");
+            }
     
             projects.remove(projectName);
             File directory = new File(ServerMainClass.RECOVERY_FILE_PATH+projectName);
@@ -510,7 +511,7 @@ public class RequestHandler implements Runnable {
         String reply = null;
         
         
-        synchronized (projectsLock) {
+        synchronized (projects) {
 
             try{
                 projects.get(projectName).equals(null);     //se esiste un progetto con lo stesso nome
@@ -518,6 +519,8 @@ public class RequestHandler implements Runnable {
             }catch(Exception e){ }
 
             Project project = new Project(projectName, user);
+            project.setIP(ServerMainClass.generateIP());
+            project.setPort(ServerMainClass.getPort());
             projects.put(projectName, project);    //aggiorno la struttura dati
 
             try {
@@ -547,7 +550,7 @@ public class RequestHandler implements Runnable {
         String pass = myArgs[2];
         String reply = null;
 
-        synchronized(usersLock){     //gestisco la concorrenza nell'accesso al 'database' degli utenti
+        synchronized(users){     //gestisco la concorrenza nell'accesso al 'database' degli utenti
             
             User currentUser = users.getUser(name);
     
@@ -589,7 +592,7 @@ public class RequestHandler implements Runnable {
             String name = myArgs[1];
         String reply = null;
 
-        synchronized(usersLock){         //gestisco la concorrenza nell'accesso al 'database' degli utenti
+        synchronized(users){         //gestisco la concorrenza nell'accesso al 'database' degli utenti
             
             User currentUser = users.getUser(name);
     

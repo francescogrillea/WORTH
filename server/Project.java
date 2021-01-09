@@ -1,5 +1,9 @@
 package server;
 
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.util.*;
 import common.*;
 
@@ -16,7 +20,7 @@ public class Project {
     private ArrayList<Card> inProgress;
     private ArrayList<Card> toBeRevised;
     private ArrayList<Card> done;
-    private Object lock;
+    private DatagramSocket socket;
     private String chatIP;
     private int port;
 
@@ -25,7 +29,11 @@ public class Project {
         name = n;
         members = new UsersDB();
         members.addUser(firstUser);
-        lock = new Object();
+        try{
+            socket = new DatagramSocket();
+        }catch(IOException e){
+            System.out.println("Error. Server cant reach chat");
+        }
 
         todo = new ArrayList<Card>();
         inProgress = new ArrayList<Card>();
@@ -36,7 +44,11 @@ public class Project {
     public Project(String n){   //quando viene caricato il progetto
         name = n;
         members = new UsersDB();
-        lock = new Object();
+        try{
+            socket = new DatagramSocket();
+        }catch(IOException e){
+            System.out.println("Error. Server cant reach chat");
+        }
 
         this.todo = new ArrayList<Card>();
         this.inProgress = new ArrayList<Card>();
@@ -52,11 +64,6 @@ public class Project {
     //Ritorna l'insieme dei membri del progetto
     public UsersDB getUsers() {
         return members;
-    }
-
-    //Ritorna un oggetto utilizzato per la concorrenza
-    public Object getLock(){
-        return lock;
     }
 
     public void setIP(String ip){
@@ -109,6 +116,17 @@ public class Project {
     }
 
 
+    public void sendMessage(String m){
+        String message = "system: "+m;
+        try{
+            DatagramPacket datagram = new DatagramPacket(message.getBytes(), message.length(), InetAddress.getByName(this.chatIP), this.port);
+            socket.send(datagram);
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+
     //Aggiunge un nuovo membro al progetto. Ritorna false se l'utente e' gia' membro
     public boolean addMember(User user){
         if(members.containsUser(user.getUsername()))
@@ -138,21 +156,30 @@ public class Project {
         return card;
     }
 
-    public Card moveCard(String cardName, String srcList, String destList) throws NullPointerException{
+    public Card moveCard(String cardName, String srcList, String destList) throws Exception {
 
         //controllo che la card venga spostata in uno stato valido
         if(srcList.equals(destList))
-            throw new IllegalStateException();
+            throw new Exception("Can't move a card from " + srcList + " to "+ destList);
+        else if(!destList.equals(TODO) && !destList.equals(INPROGRESS) && !destList.equals(TOBEREVISED) && !destList.equals(DONE))
+            throw new Exception("List "+destList+" not found. Card lists-> todo, inprogress, toberevised, done");
+        else if(!srcList.equals(TODO) && !srcList.equals(INPROGRESS) && !srcList.equals(TOBEREVISED) && !srcList.equals(DONE))
+            throw new Exception("List "+srcList+" not found. Card lists-> todo, inprogress, toberevised, done");
         else if(srcList.equals(TODO) && !(destList.equals(INPROGRESS)))
-            throw new IllegalStateException();
+            throw new Exception("Can't move a card from " + srcList + " to "+ destList);
         else if(destList.equals(TODO) || srcList.equals(DONE))
-            throw new IllegalStateException();
+            throw new Exception("Can't move a card from " + srcList + " to "+ destList);
+        
 
-        Card card = getCard(cardName);  //torna null se non c'e' corrispondenza
+        Card card = getCard(cardName);  //torna null se la card che cerco non esiste
+
+        if(!card.getListName().equals(srcList))     //verifico che la card si trovi effettivamente nella lista di partenza
+            throw new Exception("Card is not in " + srcList+" list");
+
         card.move(destList);
 
-        getList(destList).add(card);    //torna null se destList non e' una lista
-        getList(srcList).remove(card);  //torna null se srcList non e' una lista
+        getList(destList).add(card);
+        getList(srcList).remove(card);
         
         return card;
     }
@@ -231,6 +258,12 @@ public class Project {
             if(c.getName().equals(cardName))
                 return true;
         
+        return false;
+    }
+
+	public boolean canDelete() {
+        if(todo.isEmpty() && inProgress.isEmpty() && toBeRevised.isEmpty())
+            return true;
         return false;
     }
 }
