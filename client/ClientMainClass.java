@@ -20,7 +20,7 @@ public class ClientMainClass {
     private static HashMap<String, Chat> chats;     //struttura dati che tiene la corrispondenza Progetti-Chat
     private static boolean logIn_effettuato;        //flag di controllo per verificare se l'utente e' loggato
 
-    private static Registry registration_registry;  //TODO aggiungere commenti e renderle piu' pulite
+    private static Registry registration_registry;      
     private static RegistrationInterface registration;
 
     public static void main(String[] args) {
@@ -29,9 +29,9 @@ public class ClientMainClass {
         chats = new HashMap<String, Chat>();
         
         logIn_effettuato = false;
-        Socket socket;
-        BufferedReader reader;
-        BufferedWriter writer;
+           //socket per la connessione TCP
+        BufferedReader reader;          //stream dal server TCP al client
+        BufferedWriter writer;          //stream dal client TCP al server
 
         System.out.println("Welcome in WORTH");
         System.out.println("Please login or register to proceed. If you need help send \"help\"");
@@ -39,12 +39,13 @@ public class ClientMainClass {
         String message = null;
         String result = null;
 
-
-        try{
+        try(Socket socket = new Socket();
+            BufferedReader cmd_line = new BufferedReader(new InputStreamReader(System.in));
+            ){
             
-            //RMI
-            registration_registry = LocateRegistry.getRegistry(RMI_Port);
-            registration = (RegistrationInterface) registration_registry.lookup("RegisterUser");
+            //RMI- ottengo un riferimento all'oggetto remoto in modo da utilizzare i suoi metodi
+            registration_registry = LocateRegistry.getRegistry(RMI_Port);                           //recupero la registry sulla porta RMI
+            registration = (RegistrationInterface) registration_registry.lookup("RegisterUser");    //richiedo l'oggetto dal nome pubblico
             
             //Callbacks
             NotificationSystemClientInterface callbackObj = new ClientNotificationService(localUsersDB);
@@ -53,15 +54,10 @@ public class ClientMainClass {
             NotificationSystemClientInterface stub = (NotificationSystemClientInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
             
             //TCP Connection
-            socket = new Socket();
             socket.connect(new InetSocketAddress(InetAddress.getLocalHost(), TCP_Port));
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             
-
-            //cmd line
-            BufferedReader cmd_line = new BufferedReader(new InputStreamReader(System.in));
-
             do{
                 System.out.println();
                 System.out.printf("> ");
@@ -70,26 +66,23 @@ public class ClientMainClass {
                     message = cmd_line.readLine();
                     String[] myArgs = message.split(" ");
 
-
-                    if(message.startsWith("register")){         //REGISTER- utente si registra alla piattaforma
+                    if(message.startsWith("close")){
+                        break;
+                    }
+                    else if(message.startsWith("login")){
+                        server.registerForCallback(stub);           //chiede al server di registrarsi per la callback
+                    }
+                    else if(message.startsWith("register")){        //REGISTER- utente si registra alla piattaforma
                         registerFunction(myArgs);
                         continue;
                     }
-                    else if(message.startsWith("listUsers")){   //LISTUSERS- visualizza lista utenti
+                    else if(message.startsWith("listUsers")){       //LISTUSERS- visualizza lista utenti
                         listUsersFunction();
                         continue;
                     }
                     else if(message.startsWith("listOnlineUsers")){     //LISTONLINEUSERS- visualizza lista utenti online
                         listOnlineUsersFunction();
                         continue;
-                    }
-                    else if(message.startsWith("login")){       //LOGIN- utente accede alla piattaforma                 
-                        //TODO capire se va messo in un if come per il logout. Piu' invocazioni di login possono registratlo piu' volte?
-                        server.registerForCallback(stub);   //chiede al server di registrarsi per la callback                                    
-                    }
-                    else if(message.startsWith("logout")){      //LOGOUT- utente si disconnette dalla piattaforma
-                        if(logIn_effettuato)
-                            server.unregisterForCallback(stub);    //chiede al server di disiscriversi dal servizio di notifica                       
                     }
                     else if(message.startsWith("sendChat")){
                         result = sendChatHandler(myArgs);
@@ -104,16 +97,17 @@ public class ClientMainClass {
                         continue;
                     }
 
-
-                    //tutte le altre operazioni vengono gestite direttamente dal server
-                    writer.write(message+"\r\n");   //send command to server
+                    writer.write(message+"\r\n");                       //invio la richiesta al server
                     writer.flush();
-                    while(!(result = reader.readLine()).equals("")){
+                    while(!(result = reader.readLine()).equals("")){    //leggo la risposta del server
 
                         if(message.startsWith("joinChat") && !result.startsWith("Error"))
                             result = joinChat(result);
-                        
-                        else if(message.startsWith("logout") && !result.startsWith("Error")){
+                        else if(message.startsWith("login") && !result.startsWith("Error")){        //gestisco lo stato a seguito del login
+                            logIn_effettuato = true;
+                        }
+                        else if(message.startsWith("logout") && !result.startsWith("Error")){       //gestisco lo stato a seguito del logout
+                            server.unregisterForCallback(stub);    //chiede al server di disiscriversi dal servizio di notifica 
                             logIn_effettuato = false;
                             chats.clear();
                         }
@@ -126,70 +120,22 @@ public class ClientMainClass {
                 }
                 
             }while(!message.equals("close"));
-            //TODO ? fare la socket.close();
-
-            
+            if(server!=null)
+                server.unregisterForCallback(stub);     //mi disiscrivo dalle callback
         }catch(Exception e){
             e.printStackTrace();
         }
+        /*
+            TODO - capire perche' non termina
+                sicuramente resta in ascolto su qualcosa, perche' non termina neanche con un return!
+        */
     }
 
 
-    private static ArrayList<String> readChatHandler(String[] myArgs){
 
-        ArrayList<String> out = new ArrayList<String>();
-        if(myArgs.length != 2){
-            out.add("Error. Use readChat projectName");
-            return out;
-        }
-
-        String projectName = myArgs[1];
-        Chat chat = chats.get(projectName);
-
-        try{
-            chat.equals(null);
-        }catch(NullPointerException e){
-            out.add("Error. You have not joined this chat");
-            return out;
-        }
-
-        if(!chat.isValid()){
-            chats.remove(projectName);
-            out.add("Error. You're trying to read the chat from a deleted project");
-        }
-        else
-            out = (ArrayList<String>)chat.getMessages();
-        return out;
-    }
-
-
-    private static String sendChatHandler(String[] myArgs) {
-        
-        if(myArgs.length < 3)
-            return "Error. Use sendChat projectName message";
-
-        String projectName = myArgs[1];
-
-        Chat chat = chats.get(projectName);
-        try{
-            chat.equals(null);
-        }catch(NullPointerException e){
-            return "Error. You have not joined this chat";
-        }
-
-        if(!chat.isValid()){
-            chats.remove(projectName);
-            return "Error. You're trying to write in the chat of a deleted project";
-        }
-
-        String message = "";
-        for (int i = 2; i < myArgs.length; i++) 
-            message = message + myArgs[i]+" ";
-        
-        chat.sendMessage(message);
-        return "Message sent";
-    }
-
+    /*
+        @Overview: funzione di registazione alla piattaforma, dove vengono invocati i metodi remoti
+    */
     public static void registerFunction(String[] myArgs) throws RemoteException, NotBoundException {
         
         String result;
@@ -197,11 +143,15 @@ public class ClientMainClass {
         if(logIn_effettuato == true)
             result = "Error. Log out before new registration";
         else
-            result = registration.register(myArgs);    
+            result = registration.register(myArgs);     //RMI- invoco il metodo remoto
         
         System.out.println("< "+result);
     }
 
+
+    /*
+        @Overview: funzione che esamina la lista locale degli utenti
+    */
     public static void listUsersFunction(){
         String result = "List of all users";
         System.out.println("< "+result);
@@ -210,6 +160,9 @@ public class ClientMainClass {
             System.out.println("\t"+u.getUsername() + " - "+ u.getStatus());
     }
 
+    /*
+        @Overview: funzione che esamina la lista locale degli utenti online
+    */
     private static void listOnlineUsersFunction() {
         String result = "Online users";
         System.out.println("< "+result);
@@ -252,6 +205,67 @@ public class ClientMainClass {
         new Thread(chat).start();
         chats.put(projectName, chat);
         return "User joined project's chat";
+    }
+
+    /*
+        @Overview: leggo dal 'buffer' della chat che contiene i messaggi non letti
+    */
+    private static ArrayList<String> readChatHandler(String[] myArgs){
+
+        ArrayList<String> out = new ArrayList<String>();
+        if(myArgs.length != 2){
+            out.add("Error. Use readChat projectName");
+            return out;
+        }
+
+        String projectName = myArgs[1];
+        Chat chat = chats.get(projectName);
+
+        try{
+            chat.equals(null);
+        }catch(NullPointerException e){
+            out.add("Error. You have not joined this chat");
+            return out;
+        }
+
+        if(!chat.isValid()){        //se sto provando a leggere da una chat, il cui progetto e' stato da poco eliminata -> rimuovo la entry
+            chats.remove(projectName);
+            out.add("Error. You're trying to read the chat from a deleted project");
+        }
+        else
+            out = (ArrayList<String>)chat.getMessages();
+        return out;
+    }
+
+
+    /*
+        @Overview: invio un messaggio nella chat
+    */
+    private static String sendChatHandler(String[] myArgs) {
+        
+        if(myArgs.length < 3)
+            return "Error. Use sendChat projectName message";
+
+        String projectName = myArgs[1];
+
+        Chat chat = chats.get(projectName);
+        try{
+            chat.equals(null);
+        }catch(NullPointerException e){
+            return "Error. You have not joined this chat";
+        }
+
+        if(!chat.isValid()){
+            chats.remove(projectName);
+            return "Error. You're trying to write in the chat of a deleted project";
+        }
+
+        String message = "";
+        for (int i = 2; i < myArgs.length; i++) 
+            message = message + myArgs[i]+" ";
+        
+        chat.sendMessage(message);
+        return "Message sent";
     }
 
 }

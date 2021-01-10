@@ -4,7 +4,7 @@ import java.io.Serializable;
 
 public class User implements Serializable {
 
-    private static final long serialVersionUID = 1L;    //TODO- vedere che vuol dire
+    private static final long serialVersionUID = 1L;
     private final String ONLINE = "Online";
     private final String OFFLINE = "Offline";
 
