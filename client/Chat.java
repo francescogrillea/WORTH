@@ -7,7 +7,7 @@ import java.util.*;
 
 public class Chat implements Runnable {
 
-    private String username;
+    private String username;            //salvo l'username del mittente
     private String IP;
     private int PORT;
     private InetAddress ADDRESS;
@@ -19,7 +19,7 @@ public class Chat implements Runnable {
         this.username = username;
         this.IP = ip;
         this.PORT = port;
-        IS_LISTENING = false;   //tODO - forse impostare a true
+        this.IS_LISTENING = false;
         this.unreadMessages = new ArrayList<String>();
         
         try{
@@ -55,18 +55,15 @@ public class Chat implements Runnable {
 
             try{
                 DatagramPacket datagram = new DatagramPacket(new byte[512], 512);
-                group.receive(datagram);
+                group.receive(datagram);        //ricevo il messaggio dal gruppo multicast
 
                 String message = new String(datagram.getData(), "US-ASCII");
-                System.out.println("system: ricevuto " + message +" in multicast");
-                if(message.startsWith("system: close"))
+                if(message.startsWith("system: close"))     //nel caso in cui il sistema manda close, vuol dire che un progetto sta per essere eliminato
                     break;
                 
                 synchronized(unreadMessages){
                     unreadMessages.add(message);
-                }
-                
-
+                }      
             }catch(Exception e){
                 e.printStackTrace();
             }

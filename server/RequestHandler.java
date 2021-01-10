@@ -38,10 +38,8 @@ public class RequestHandler implements Runnable {
 
         while (true) {
 
-            System.out.println("In while");
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                    BufferedWriter writer = new BufferedWriter(
-                            new OutputStreamWriter(clientSocket.getOutputStream()));) {
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));) {
 
                 while ((request = reader.readLine()) != null) {
 
@@ -84,14 +82,32 @@ public class RequestHandler implements Runnable {
                     else if(myArgs[0].equals("getCardHistory")) //GET CARD HISTORY
                         reply = getCardHistoryHandler(myArgs);
                     
-                    else if(myArgs[0].equals("joinChat"))
+                    else if(myArgs[0].equals("joinChat"))       //JOIN A CHAT
                         reply = joinChatHandler(myArgs);
+                    
                     else                                        //INVALID OPTION
                         reply = invalidOptionHandler();
                     
                     writer.write(reply + "\n\r\n");
                     writer.flush();
                 }
+            } catch (IOException e) {
+                System.out.println("Un utente si e' disconnesso dal sistema");
+                
+                if(user.getStatus().equals("Online")){      //se l'utente si e' disconnesso senza aver prima effettuato il logout
+                    synchronized(users){
+                        
+                        user.setOffline();
+                        logIn_effettuato = false;
+                        try {
+                            notificationService.update(this.users);            //notifico la modifica
+                        } catch (RemoteException ex) {
+                            System.out.println("System_error: cannot do callback");
+                        }
+                    }
+                }
+                break;
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -165,7 +181,7 @@ public class RequestHandler implements Runnable {
                 return "Error. User "+this.user.getUsername() +" isn't a member of the project.";
             
             Card card;
-            card = project.getCard(cardName.toLowerCase());
+            card = project.getCard(cardName);
             try{
                 card.equals(null);
             }catch(NullPointerException e){

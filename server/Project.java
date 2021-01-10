@@ -147,7 +147,6 @@ public class Project {
 
     //Inserisce una nuova card nella lista Todo. Ritorna false se la card e' gia' presente
     public Card addCard(String cardName, String cardDescription){  //piu' utenti possono creare una card contemporaneamente
-        //TODO modificare exists Card con findCard (return null)
         if(existsCard(cardName) == true)    //se la card e' gia' esistente
             return null;
 

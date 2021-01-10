@@ -40,11 +40,14 @@ public class ServerMainClass {
         }
 
         ServerNotificationService notificationService = new NotificationClass().start(); // RMI Callback
-        new RegistrationClass(users, notificationService).start(); // RMI
+        new RegistrationClass(users, notificationService).start(); // RMI- creo un riferimento all'oggetto remoto
         new MultiThreadedServer(users, notificationService, projects).start(); // TCP
 
     }
 
+    /*
+        @Overview: ripristino lo stato del sistema andando ad esaminare la cartella recovery
+    */
     private static void restoreBackup() {
 
         try (ObjectInputStream input = new ObjectInputStream(
@@ -89,6 +92,9 @@ public class ServerMainClass {
         }
     }
 
+    /*
+        @Overview: salvo le modifiche in modo persistente
+    */
     public static boolean saveFile(String path, Object obj, Class<?> type) {
 
         String filePath = RECOVERY_FILE_PATH + path;
@@ -103,9 +109,12 @@ public class ServerMainClass {
         return true;
     }
 
+    /*
+        @Overview: assegno un IP non utilizzato alla chat di ciascun progetto per comunicare tramite
+                    il protocollo UPD
+    */
     public synchronized static String generateIP(){
 
-        System.out.println("IP Originale: "+IP);
         String[] bytes = IP.split("\\.");
 
         int[] intBytes = new int[4];
@@ -128,6 +137,10 @@ public class ServerMainClass {
         return out;
     }
 
+
+    /*
+        @Overview: restituisco la porta della connessione UDP
+    */
     public static int getPort(){
         return PORT;
     }

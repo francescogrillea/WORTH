@@ -6,7 +6,7 @@ import java.util.*;
 
 public class UsersDB implements Serializable{
 
-    private static final long serialVersionUID = 1L;    //TODO- che significa?
+    private static final long serialVersionUID = 1L;
     private HashMap<String, User> users;
 
     public UsersDB(){
