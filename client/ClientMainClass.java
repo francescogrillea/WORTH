@@ -68,7 +68,7 @@ public class ClientMainClass {
                     if (message.startsWith("close")) {
                         break;
                     } else if (message.startsWith("login")) {
-                        //server.registerForCallback(stub); // chiede al server di registrarsi per la callback
+                        server.registerForCallback(stub); // chiede al server di registrarsi per la callback
                     } else if (message.startsWith("register")) { // REGISTER- utente si registra alla piattaforma
                         registerFunction(myArgs);
                         continue;
@@ -101,7 +101,7 @@ public class ClientMainClass {
                             logIn_effettuato = true;
                         } else if (message.startsWith("logout") && !result.startsWith("Error")) { // gestisco lo stato a
                                                                                                   // seguito del logout
-                            //server.unregisterForCallback(stub); // chiede al server di disiscriversi dal servizio di
+                            server.unregisterForCallback(stub); // chiede al server di disiscriversi dal servizio di
                                                                 // notifica
                             logIn_effettuato = false;
                             chats.clear();
