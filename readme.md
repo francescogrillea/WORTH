@@ -8,7 +8,7 @@ javac javac ./client/*.java ./common/*.java ./server/*.java
 ```
 **Run**
 
-Server: `java server.ServerMainClass`  
+Server: ```bash java server.ServerMainClass```  
 
 Client:  `java client.ClientMainClass`
 
