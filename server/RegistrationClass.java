@@ -40,7 +40,7 @@ public class RegistrationClass extends RemoteServer implements RegistrationInter
         String password = myArgs[2];
 
         try{
-            users.getUser(nickname);
+            users.getUser(nickname);        //TODO da controllare sto controllo
         }catch(NullPointerException e){
             return "Error. User "+nickname+" already registered";
         }
@@ -49,16 +49,6 @@ public class RegistrationClass extends RemoteServer implements RegistrationInter
             users.addUser(new User(nickname, password));
             notificationService.update(users);
             ServerMainClass.saveFile("utentiRegistrati.json", users, UsersDB.class);
-            /*
-            try(
-                ObjectOutputStream output = new ObjectOutputStream(
-                    new FileOutputStream(ServerMainClass.RECOVERY_FILE_PATH+"utentiRegistrati.json"));){
-    
-                output.writeObject(users);
-            }catch(Exception e){
-                System.out.println(e);
-            }
-            */
         }
         return "User "+nickname+" has been registered correctly. Login to continue.";
     }

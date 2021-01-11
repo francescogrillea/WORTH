@@ -7,31 +7,30 @@ import java.rmi.*;
 import java.rmi.registry.*;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
-                 
 
 public class ClientMainClass {
 
-    //porte usate per la comunicazione 
+    // porte usate per la comunicazione
     private static final int RMI_Port = 4567;
     private static final int RMI_CALLBACK_Port = 4568;
     private static final int TCP_Port = 4569;
 
-    private static UsersDB localUsersDB;            //stuttura dati degli utenti aggiornata tramite callbacks
-    private static HashMap<String, Chat> chats;     //struttura dati che tiene la corrispondenza Progetti-Chat
-    private static boolean logIn_effettuato;        //flag di controllo per verificare se l'utente e' loggato
+    private static UsersDB localUsersDB; // stuttura dati degli utenti aggiornata tramite callbacks
+    private static HashMap<String, Chat> chats; // struttura dati che tiene la corrispondenza Progetti-Chat
+    private static boolean logIn_effettuato; // flag di controllo per verificare se l'utente e' loggato
 
-    private static Registry registration_registry;      
+    private static Registry registration_registry;
     private static RegistrationInterface registration;
 
     public static void main(String[] args) {
-        
+
         localUsersDB = new UsersDB();
         chats = new HashMap<String, Chat>();
-        
+
         logIn_effettuato = false;
-           //socket per la connessione TCP
-        BufferedReader reader;          //stream dal server TCP al client
-        BufferedWriter writer;          //stream dal client TCP al server
+        // socket per la connessione TCP
+        BufferedReader reader; // stream dal server TCP al client
+        BufferedWriter writer; // stream dal client TCP al server
 
         System.out.println("Welcome in WORTH");
         System.out.println("Please login or register to proceed. If you need help send \"help\"");
@@ -39,96 +38,95 @@ public class ClientMainClass {
         String message = null;
         String result = null;
 
-        try(Socket socket = new Socket();
-            BufferedReader cmd_line = new BufferedReader(new InputStreamReader(System.in));
-            ){
-            
-            //RMI- ottengo un riferimento all'oggetto remoto in modo da utilizzare i suoi metodi
-            registration_registry = LocateRegistry.getRegistry(RMI_Port);                           //recupero la registry sulla porta RMI
-            registration = (RegistrationInterface) registration_registry.lookup("RegisterUser");    //richiedo l'oggetto dal nome pubblico
-            
-            //Callbacks
+        try (Socket socket = new Socket();
+            BufferedReader cmd_line = new BufferedReader(new InputStreamReader(System.in));) {
+
+            // RMI- ottengo un riferimento all'oggetto remoto in modo da utilizzare i suoi metodi
+            registration_registry = LocateRegistry.getRegistry(RMI_Port); // recupero la registry sulla porta RMI
+            registration = (RegistrationInterface) registration_registry.lookup("RegisterUser"); // richiedo l'oggetto
+                                                                                                 // dal nome pubblico
+
+            // Callbacks
             NotificationSystemClientInterface callbackObj = new ClientNotificationService(localUsersDB);
             Registry registry = LocateRegistry.getRegistry(RMI_CALLBACK_Port);
-            NotificationSystemServerInterface server = (NotificationSystemServerInterface)registry.lookup("NotificationService");
+            NotificationSystemServerInterface server = (NotificationSystemServerInterface) registry.lookup("NotificationService");
             NotificationSystemClientInterface stub = (NotificationSystemClientInterface) UnicastRemoteObject.exportObject(callbackObj, 0);
-            
-            //TCP Connection
+
+            // TCP Connection
             socket.connect(new InetSocketAddress(InetAddress.getLocalHost(), TCP_Port));
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            
-            do{
+
+            do {
                 System.out.println();
                 System.out.printf("> ");
-                
-                try{
+
+                try {
                     message = cmd_line.readLine();
                     String[] myArgs = message.split(" ");
 
-                    if(message.startsWith("close")){
+                    if (message.startsWith("close")) {
                         break;
-                    }
-                    else if(message.startsWith("login")){
-                        server.registerForCallback(stub);           //chiede al server di registrarsi per la callback
-                    }
-                    else if(message.startsWith("register")){        //REGISTER- utente si registra alla piattaforma
+                    } else if (message.startsWith("login")) {
+                        //server.registerForCallback(stub); // chiede al server di registrarsi per la callback
+                    } else if (message.startsWith("register")) { // REGISTER- utente si registra alla piattaforma
                         registerFunction(myArgs);
                         continue;
-                    }
-                    else if(message.startsWith("listUsers")){       //LISTUSERS- visualizza lista utenti
+                    } else if (message.startsWith("listUsers")) { // LISTUSERS- visualizza lista utenti
                         listUsersFunction();
                         continue;
-                    }
-                    else if(message.startsWith("listOnlineUsers")){     //LISTONLINEUSERS- visualizza lista utenti online
+                    } else if (message.startsWith("listOnlineUsers")) { // LISTONLINEUSERS- visualizza lista utenti online
                         listOnlineUsersFunction();
                         continue;
-                    }
-                    else if(message.startsWith("sendChat")){
+                    } else if (message.startsWith("sendChat")) {
                         result = sendChatHandler(myArgs);
-                        System.out.println("< "+result);
+                        System.out.println("< " + result);
                         continue;
-                    }
-                    else if(message.startsWith("readChat")){
+                    } else if (message.startsWith("readChat")) {
                         ArrayList<String> messages = readChatHandler(myArgs);
-                        System.out.println("< You have "+ messages.size() +" unread messages: ");
-                        for (String msg : messages) 
-                            System.out.println("\t"+ msg);
+                        System.out.println("< You have " + messages.size() + " unread messages: ");
+                        for (String msg : messages)
+                            System.out.println("\t" + msg);
                         continue;
                     }
 
-                    writer.write(message+"\r\n");                       //invio la richiesta al server
+                    writer.write(message + "\r\n"); // invio la richiesta al server
                     writer.flush();
-                    while(!(result = reader.readLine()).equals("")){    //leggo la risposta del server
+                    while (!(result = reader.readLine()).equals("")) { // leggo la risposta del server
 
-                        if(message.startsWith("joinChat") && !result.startsWith("Error"))
+                        if (message.startsWith("joinChat") && !result.startsWith("Error"))
                             result = joinChat(result);
-                        else if(message.startsWith("login") && !result.startsWith("Error")){        //gestisco lo stato a seguito del login
+                        else if (message.startsWith("login") && !result.startsWith("Error")) { // gestisco lo stato a
+                                                                                               // seguito del login
                             logIn_effettuato = true;
-                        }
-                        else if(message.startsWith("logout") && !result.startsWith("Error")){       //gestisco lo stato a seguito del logout
-                            server.unregisterForCallback(stub);    //chiede al server di disiscriversi dal servizio di notifica 
+                        } else if (message.startsWith("logout") && !result.startsWith("Error")) { // gestisco lo stato a
+                                                                                                  // seguito del logout
+                            //server.unregisterForCallback(stub); // chiede al server di disiscriversi dal servizio di
+                                                                // notifica
                             logIn_effettuato = false;
                             chats.clear();
+                            localUsersDB.clear();
                         }
-                        System.out.println("< "+result);
-                    } 
-                    
-                }catch(Exception e){
+                        System.out.println("< " + result);
+                    }
+
+                } catch (Exception e) {
                     System.out.println("An error occurred.");
                     e.printStackTrace();
                 }
-                
-            }while(!message.equals("close"));
-            if(server!=null)
-                server.unregisterForCallback(stub);     //mi disiscrivo dalle callback
-        }catch(Exception e){
+
+            } while (!message.equals("close"));
+            
+            //il client termina in maniera pulita
+            UnicastRemoteObject.unexportObject(callbackObj, false); 
+            if (server != null)
+                server.unregisterForCallback(stub); // mi disiscrivo dalle callback
+            registry.unbind("NotificationService");
+
+        } catch (Exception e) {
             e.printStackTrace();
         }
-        /*
-            TODO - capire perche' non termina
-                sicuramente resta in ascolto su qualcosa, perche' non termina neanche con un return!
-        */
+
     }
 
 
@@ -194,12 +192,11 @@ public class ClientMainClass {
         String[] data = result.split(" ");
         String username = data[0];
         String projectName = data[1];
+        String ip = data[2];
+        int port = Integer.parseInt(data[3]);
 
         if(alreadyJoined(projectName))
             return "Error. User already joined this chat";
-
-        String ip = data[2];
-        int port = Integer.parseInt(data[3]);
         
         Chat chat =  new Chat(username, ip, port);
         new Thread(chat).start();

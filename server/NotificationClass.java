@@ -9,14 +9,8 @@ import common.*;
 public class NotificationClass {
 
     private final int RMI_CALLBACK_PORT = 4568;
-    /*
-    private UsersDB users;
 
-    public NotificationClass(UsersDB u) {
-        users = u;
-    }
-    */
-
+    
     public ServerNotificationService start() {
         try {
             ServerNotificationService server = new ServerNotificationService();
