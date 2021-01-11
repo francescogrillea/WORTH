@@ -11,6 +11,7 @@ public class NotificationClass {
     private final int RMI_CALLBACK_PORT = 4568;
 
     
+    //pubblico i metodi remoti per l'iscrizione al servizio di notifica
     public ServerNotificationService start() {
         try {
             ServerNotificationService server = new ServerNotificationService();
@@ -21,7 +22,6 @@ public class NotificationClass {
             r.bind("NotificationService", stub);
 
             return server;
-
         } catch (Exception e) {
             e.printStackTrace();
         }

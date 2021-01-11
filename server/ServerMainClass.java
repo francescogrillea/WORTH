@@ -36,7 +36,6 @@ public class ServerMainClass {
             System.out.println(p.getName());
             for (User u : p.getMembers())
                 System.out.println("\t" + u.getUsername());
-
         }
 
         ServerNotificationService notificationService = new NotificationClass().start(); // RMI Callback
