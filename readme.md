@@ -4,7 +4,7 @@ Laboratorio di Reti- Progetto a.a. 2020-2021
 
 **Compile**
 ```bash
-javac javac ./client/*.java ./common/*.java ./server/*.java
+javac ./client/*.java ./common/*.java ./server/*.java
 ```
 **Run**
 
