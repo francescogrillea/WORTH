@@ -12,4 +12,7 @@ Server:
 java server.ServerMainClass
 ```  
 Client:  
+```bash
 java client.ClientMainClass
+```  
+
