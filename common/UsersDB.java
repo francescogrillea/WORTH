@@ -48,6 +48,10 @@ public class UsersDB implements Serializable{
     public void copy(UsersDB newDB){
         this.users = newDB.getStructure();
     }
+
+    public void clear(){
+        this.users.clear();
+    }
     
 
 }

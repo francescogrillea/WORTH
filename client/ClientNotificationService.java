@@ -18,7 +18,6 @@ public class ClientNotificationService extends RemoteObject implements Notificat
     @Override
     public void notifyEvent(UsersDB newDB) throws RemoteException {
         users.copy(newDB);
-        //System.out.println("Il client riceve una notifica dal sistema");
     }
 
 }

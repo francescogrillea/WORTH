@@ -33,10 +33,7 @@ public class ServerNotificationService extends RemoteServer implements Notificat
     @Override
     public synchronized void unregisterForCallback(NotificationSystemClientInterface clientInterface) {
         
-        if(clients.remove(clientInterface))
-            System.out.println("cliente rimosso");
-        else
-            System.out.println("errore occurred");
+        clients.remove(clientInterface);
     }
 
     public void update(UsersDB newDB)throws RemoteException {
