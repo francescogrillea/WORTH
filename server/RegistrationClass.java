@@ -40,15 +40,16 @@ public class RegistrationClass extends RemoteServer implements RegistrationInter
         String password = myArgs[2];
 
         try{
-            users.getUser(nickname);        //TODO da controllare sto controllo
-        }catch(NullPointerException e){
+            User u = users.getUser(nickname);           //controllo se l'utente e' gia' iscritto
+            u.equals(null);
             return "Error. User "+nickname+" already registered";
-        }
-        synchronized(users){
+        }catch(NullPointerException e){}
 
-            users.addUser(new User(nickname, password));
-            notificationService.update(users);
-            ServerMainClass.saveFile("utentiRegistrati.json", users, UsersDB.class);
+        synchronized(users){        //accedo in mutua esclusione alla struttura dati degli utenti
+
+            users.addUser(new User(nickname, password));        //aggiorno la struttura dati
+            notificationService.update(users);                  //notifico l'aggiornamento
+            ServerMainClass.saveFile("utentiRegistrati.json", users, UsersDB.class);    //salvo l'aggiornamento
         }
         return "User "+nickname+" has been registered correctly. Login to continue.";
     }

@@ -5,7 +5,6 @@ import java.net.Socket;
 import java.nio.file.*;
 import java.rmi.RemoteException;
 import java.util.*;
-
 import common.*;
 
 public class RequestHandler implements Runnable {
@@ -92,7 +91,7 @@ public class RequestHandler implements Runnable {
                     writer.flush();
                 }
             } catch (IOException e) {
-                System.out.println("Un utente si e' disconnesso dal sistema");
+                System.out.println("System: un utente si e' disconnesso dal sistema");
                 
                 if(user.getStatus().equals("Online")){      //se l'utente si e' disconnesso senza aver prima effettuato il logout
                     synchronized(users){
@@ -374,7 +373,7 @@ public class RequestHandler implements Runnable {
         synchronized(users){    //gestisco la concorrenza nell'accesso al 'database' degli utenti
             try{
                 u = users.getUser(name);
-                u.equals(null);       
+                u.equals(null);
             }catch(NullPointerException e){
                 return "Error. User "+name+" not found";
             }

@@ -67,7 +67,7 @@ public class ClientMainClass {
 
                     if (message.startsWith("close")) {
                         break;
-                    } else if (message.startsWith("login")) {
+                    } else if (message.startsWith("login")) {   // LOGIN - utente accede alla piattaforma 
                         server.registerForCallback(stub); // chiede al server di registrarsi per la callback
                     } else if (message.startsWith("register")) { // REGISTER- utente si registra alla piattaforma
                         registerFunction(myArgs);
@@ -78,33 +78,30 @@ public class ClientMainClass {
                     } else if (message.startsWith("listOnlineUsers")) { // LISTONLINEUSERS- visualizza lista utenti online
                         listOnlineUsersFunction();
                         continue;
-                    } else if (message.startsWith("sendChat")) {
+                    } else if (message.startsWith("sendChat")) {        // SEND CHAT - invia un messaggio sulla chat
                         result = sendChatHandler(myArgs);
                         System.out.println("< " + result);
                         continue;
-                    } else if (message.startsWith("readChat")) {
+                    } else if (message.startsWith("readChat")) {        //READ CHAT - legge i messaggi dalla chat
                         ArrayList<String> messages = readChatHandler(myArgs);
-                        System.out.println("< You have " + messages.size() + " unread messages: ");
+                        System.out.println("< You have " + (messages.size()-1) + " unread messages: ");
                         for (String msg : messages)
                             System.out.println("\t" + msg);
                         continue;
                     }
 
-                    writer.write(message + "\r\n"); // invio la richiesta al server
+                    writer.write(message + "\r\n");                     // invio la richiesta al server
                     writer.flush();
-                    while (!(result = reader.readLine()).equals("")) { // leggo la risposta del server
+                    while (!(result = reader.readLine()).equals("")) {  // leggo la risposta del server
 
                         if (message.startsWith("joinChat") && !result.startsWith("Error"))
                             result = joinChat(result);
-                        else if (message.startsWith("login") && !result.startsWith("Error")) { // gestisco lo stato a
-                                                                                               // seguito del login
+                        else if (message.startsWith("login") && !result.startsWith("Error")) { // gestisco lo stato a seguito del login
                             logIn_effettuato = true;
-                        } else if (message.startsWith("logout") && !result.startsWith("Error")) { // gestisco lo stato a
-                                                                                                  // seguito del logout
-                            server.unregisterForCallback(stub); // chiede al server di disiscriversi dal servizio di
-                                                                // notifica
+                        } else if (message.startsWith("logout") && !result.startsWith("Error")) { // gestisco lo stato a seguito del logout
+                            server.unregisterForCallback(stub); // mi disiscrivo dal servizio di notifica
                             logIn_effettuato = false;
-                            chats.clear();
+                            chats.clear();                      //resetto le strutture dati per una nuova sessione
                             localUsersDB.clear();
                         }
                         System.out.println("< " + result);
@@ -121,7 +118,9 @@ public class ClientMainClass {
             UnicastRemoteObject.unexportObject(callbackObj, false); 
             if (server != null)
                 server.unregisterForCallback(stub); // mi disiscrivo dalle callback
-            registry.unbind("NotificationService");
+
+            for (Chat c : chats.values())   //termino l'ascolto su tutte le chat
+                c.close();
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -171,20 +170,6 @@ public class ClientMainClass {
     }
 
     /*
-        @Overview: controllo se l'utente e' gia' unito alla chat del progetto
-    */
-    private static boolean alreadyJoined(String projectName){
-        try{
-            Chat c = chats.get(projectName);        //controllo se ho già salvato 
-            if(c.isValid())                         //controllo che la chat non sia di un progetto precedentemente eliminato
-                return true;
-        }catch(NullPointerException e){ }            //la corrispondenza non esiste
-
-        return false;
-    }
-
-
-    /*
         @Overview: collego l'utente alla chat del progetto
     */
     private static String joinChat(String result){
@@ -195,9 +180,14 @@ public class ClientMainClass {
         String ip = data[2];
         int port = Integer.parseInt(data[3]);
 
-        if(alreadyJoined(projectName))
-            return "Error. User already joined this chat";
-        
+        Chat c = chats.get(projectName);
+        try{
+            c.equals(null);
+            if(c.isValid())
+                return "Error. You have already joined this chat";
+            return "Error. This chat has been deleted";
+        }catch(NullPointerException e){ }
+
         Chat chat =  new Chat(username, ip, port);
         new Thread(chat).start();
         chats.put(projectName, chat);
@@ -225,12 +215,12 @@ public class ClientMainClass {
             return out;
         }
 
-        if(!chat.isValid()){        //se sto provando a leggere da una chat, il cui progetto e' stato da poco eliminata -> rimuovo la entry
-            chats.remove(projectName);
+        if(!chat.isValid()){            //se sto provando a leggere da una chat, di un progetto eliminato
+            chats.remove(projectName);  //rimuovo la entry
             out.add("Error. You're trying to read the chat from a deleted project");
         }
         else
-            out = (ArrayList<String>)chat.getMessages();
+            out = (ArrayList<String>)chat.getMessages();    //altrimenti eseguo la funzione
         return out;
     }
 
@@ -252,11 +242,11 @@ public class ClientMainClass {
             return "Error. You have not joined this chat";
         }
 
-        if(!chat.isValid()){
-            chats.remove(projectName);
+        if(!chat.isValid()){                //se sto provando a leggere da una chat, di un progetto eliminato
+            chats.remove(projectName);      //rimuovo la entry
             return "Error. You're trying to write in the chat of a deleted project";
         }
-
+                                            //altrimenti ci scrivo
         String message = "";
         for (int i = 2; i < myArgs.length; i++) 
             message = message + myArgs[i]+" ";

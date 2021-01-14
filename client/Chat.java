@@ -3,16 +3,17 @@ package client;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.net.SocketException;
 import java.util.*;
 
 public class Chat implements Runnable {
 
-    private String username;            //salvo l'username del mittente
+    private String username;                    //salvo l'username del mittente
     private String IP;
     private int PORT;
     private InetAddress ADDRESS;
-    private boolean IS_LISTENING;       //flag che indica se l'indirizzo multicast riferito a un progetto e' ancora valido -> e' possibile che il progetto venga eliminato mentre siamo in ascolto, quindi 
-    private ArrayList<String> unreadMessages;
+    private boolean IS_LISTENING;               //flag che indica se l'indirizzo multicast riferito a un progetto e' ancora valido -> e' possibile che il progetto venga eliminato mentre siamo in ascolto, quindi 
+    private ArrayList<String> unreadMessages;   //coda dei messaggi non letti
     private MulticastSocket group;
 
     public Chat(String username, String ip, int port) {
@@ -32,6 +33,11 @@ public class Chat implements Runnable {
     }
 
 
+    public void close(){
+        group.close();
+        IS_LISTENING = false;
+    }
+
     /*
         @Overview: indica se il progetto di cui quest'istanza è chat, è stato eliminato o meno
             quindi nel caso in cui il progetto venga eliminato e subito creato uno con lo stesso nome 
@@ -48,10 +54,10 @@ public class Chat implements Runnable {
     @Override
     public void run() {
 
-        System.out.println("Resto in ascolto: "+IP + " " + PORT);
+        //System.out.println("Resto in ascolto: "+IP + " " + PORT);
         IS_LISTENING = true;
 
-        while(true){
+        while(IS_LISTENING){
 
             try{
                 DatagramPacket datagram = new DatagramPacket(new byte[512], 512);
@@ -59,16 +65,18 @@ public class Chat implements Runnable {
 
                 String message = new String(datagram.getData(), "US-ASCII");
                 if(message.startsWith("system: close"))     //nel caso in cui il sistema manda close, vuol dire che un progetto sta per essere eliminato
-                    break;
+                    break;                                  //quindi smetto di stare in ascolto
                 
-                synchronized(unreadMessages){
-                    unreadMessages.add(message);
-                }      
+                synchronized(unreadMessages){       //accedo in mutua esclusione alla coda di messaggi
+                    unreadMessages.add(message.trim());
+                }   
+            }catch(SocketException e){      //se la socket viene chiusa
+                //System.out.println("Finisco di ascoltare");
             }catch(Exception e){
                 e.printStackTrace();
             }
         }
-        IS_LISTENING = false;
+        IS_LISTENING = false;       //il progetto e' stato cancellato, quindi la chat puo' terminare
     }
     
 

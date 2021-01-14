@@ -8,10 +8,5 @@ public interface NotificationSystemClientInterface extends Remote{
         @Overview: il server notifica al client il verificarsi di un evento
     */
     public void notifyEvent(UsersDB newDB) throws RemoteException;
-
-
-    /*
-        @Overview: ritorna la struttura dati aggioranta a seguito di una callback
-    */
-    
+        
 }

@@ -49,6 +49,8 @@ public class UsersDB implements Serializable{
         this.users = newDB.getStructure();
     }
 
+
+    //remove all elements from data structure
     public void clear(){
         this.users.clear();
     }
