@@ -31,6 +31,7 @@ public class ServerMainClass {
         for (User u : users.listUser())
             System.out.println(u.getUsername() + " - " + u.getStatus());
 
+        // Il server stampa la lista dei progetti e i relativi membri
         System.out.println("Ripristino lo stato iniziale: progetti");
         for (Project p : projects.values()) {
             System.out.println(p.getName());

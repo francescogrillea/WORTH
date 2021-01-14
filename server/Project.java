@@ -56,6 +56,19 @@ public class Project {
         this.done = new ArrayList<Card>();
     }
 
+    //ripristino i membri di un progetto dalla cartella recovery
+    public void restoreMembers(UsersDB users){
+        members.copy(users);
+    }
+
+    //ripristino le card di un progetto dalla cartella recovery
+    public void restoreCard(Card card){
+
+        String list = card.getListName().toLowerCase();
+        getList(list).add(card);
+    }
+
+
     //Ritorna il nome del progetto
     public String getName(){
         return name;
@@ -74,13 +87,14 @@ public class Project {
         return chatIP;
     }
 
+    public void setPort(int p){
+        port = p;
+    }
+
     public int getPort(){
         return port;
     }
 
-    public void setPort(int p){
-        port = p;
-    }
 
     //Ritorna la lista di Cards in stato To do 
     public ArrayList<Card> getTodoCards(){
@@ -102,6 +116,7 @@ public class Project {
         return done;
     }
 
+    //Ritorna la lista listName, null se non e' una lista valida
     public ArrayList<Card> getList(String listName){
 
         if(listName.equals(TODO))
@@ -116,6 +131,7 @@ public class Project {
     }
 
 
+    //invio di un messaggio sulla chat
     public void sendMessage(String m){
         String message = "system: "+m;
         try{
@@ -184,17 +200,6 @@ public class Project {
     }
 
 
-    public void restoreMembers(UsersDB users){
-        members.copy(users);
-    }
-
-
-    public void restoreCard(Card card){
-
-        String list = card.getListName().toLowerCase();
-        getList(list).add(card);
-    }
-
     //Ritorna le informazioni (nome, descrizione e lista attuale) sulla Card cardName
     public Card getCard(String cardName){
 
@@ -260,6 +265,7 @@ public class Project {
         return false;
     }
 
+    //controllo se tutte le card sono in Done
 	public boolean canDelete() {
         if(todo.isEmpty() && inProgress.isEmpty() && toBeRevised.isEmpty())
             return true;

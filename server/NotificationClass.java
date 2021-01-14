@@ -11,7 +11,11 @@ public class NotificationClass {
     private final int RMI_CALLBACK_PORT = 4568;
 
     
-    //pubblico i metodi remoti per l'iscrizione al servizio di notifica
+    /*
+        @Overview: pubblico i metodi remoti per l'iscrizione al servizio di notifica
+        @Return: un oggetto che implementa le funzioni di iscrizione, annullamento
+            e notifica
+    */
     public ServerNotificationService start() {
         try {
             ServerNotificationService server = new ServerNotificationService();

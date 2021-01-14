@@ -23,13 +23,13 @@ public class MultiThreadedServer {
     public void start() {
 
         try (ServerSocket listeningSocket = new ServerSocket()){
-            listeningSocket.bind(new InetSocketAddress(InetAddress.getLocalHost(), TCP_Port));
+            listeningSocket.bind(new InetSocketAddress(InetAddress.getLocalHost(), TCP_Port));      //il server resta in ascolto sulla porta 4569
             
-            ThreadPoolExecutor threadPool = (ThreadPoolExecutor) Executors.newCachedThreadPool();
+            ThreadPoolExecutor threadPool = (ThreadPoolExecutor) Executors.newCachedThreadPool();   //creo un threadpool
             while(true){
-                Socket socket = listeningSocket.accept();
-                System.out.println("Un utente si e' connesso al sistema");
-                threadPool.execute(new RequestHandler(socket, users, notificationService, projects));
+                Socket socket = listeningSocket.accept();       //accetto le richieste di connessione da parte degli utenti
+                System.out.println("System: un utente si e' connesso al sistema");  
+                threadPool.execute(new RequestHandler(socket, users, notificationService, projects));   //gestisco le loro richieste
             }
         } catch (IOException e) {
             e.printStackTrace();
